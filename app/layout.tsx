@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   description: "Dashboard intelijen review pasien untuk rumah sakit.",
 };
 
+import { AuthProvider } from "./lib/auth-context";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -13,7 +15,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" suppressHydrationWarning>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }
