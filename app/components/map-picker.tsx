@@ -66,8 +66,8 @@ export function MapPicker({ onResolve, initialLat, initialLng }: MapPickerProps)
 
       setResolvedData(result);
       onResolve(result);
-    } catch (err: any) {
-      setError(err.message || "Gagal mencocokkan koordinat dengan Google Places ID. Pastikan API key Google Maps valid.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Gagal mencocokkan koordinat dengan Google Places ID. Pastikan API key Google Maps valid.");
     } finally {
       setIsResolving(false);
     }

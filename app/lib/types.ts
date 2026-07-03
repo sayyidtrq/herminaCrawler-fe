@@ -63,6 +63,8 @@ export type Review = {
   rating: number | null;
   review_text: string;
   review_time: string | null;
+  owner_response_text?: string | null;
+  owner_response_time?: string | null;
   sentiment: string | null;
   issue_category: string | null;
   urgency: string | null;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { CheckCircle2, MapPin, Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { AppShell } from "../components/app-shell";
 import { DataTable, type DataTableColumn } from "../components/data-table";
@@ -32,6 +33,7 @@ type BranchScore = {
 };
 
 export default function LocationsClient() {
+  const searchParams = useSearchParams();
   const [isMounted, setIsMounted] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -41,8 +43,9 @@ export default function LocationsClient() {
   const [actionMessage, setActionMessage] = useState<ActionMessage | null>(null);
   const [locationForm, setLocationForm] = useState<LocationFormState>(initialLocationForm);
   const [editingLocationId, setEditingLocationId] = useState<number | null>(null);
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [sourceFilter, setSourceFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "all");
+  const [sourceFilter, setSourceFilter] = useState(searchParams.get("source") ?? "all");
+  const [locationIdFilter, setLocationIdFilter] = useState<number | "">(Number(searchParams.get("location_id")) || "");
 
   const loadData = useCallback(async (options?: { silent?: boolean }) => {
     if (!options?.silent) setIsLoading(true);
@@ -70,6 +73,12 @@ export default function LocationsClient() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [loadData]);
+
+  useEffect(() => {
+    setStatusFilter(searchParams.get("status") ?? "all");
+    setSourceFilter(searchParams.get("source") ?? "all");
+    setLocationIdFilter(Number(searchParams.get("location_id")) || "");
+  }, [searchParams]);
 
   async function runAction(title: string, action: () => Promise<unknown>) {
     setIsActionRunning(true);
@@ -156,9 +165,10 @@ export default function LocationsClient() {
         (statusFilter === "active" && location.is_active) ||
         (statusFilter === "inactive" && !location.is_active);
       const matchesSource = sourceFilter === "all" || location.source === sourceFilter;
-      return matchesStatus && matchesSource;
+      const matchesLocation = !locationIdFilter || location.id === locationIdFilter;
+      return matchesStatus && matchesSource && matchesLocation;
     });
-  }, [locations, sourceFilter, statusFilter]);
+  }, [locationIdFilter, locations, sourceFilter, statusFilter]);
 
   const scores = useMemo<Record<number, BranchScore>>(() => {
     return Object.fromEntries(
@@ -328,6 +338,10 @@ export default function LocationsClient() {
               ].filter(Boolean).join(" ")}
               filters={
                 <>
+                  <select value={locationIdFilter} onChange={(event) => setLocationIdFilter(Number(event.target.value) || "")}>
+                    <option value="">All locations</option>
+                    {locations.map((location) => <option value={location.id} key={location.id}>{location.branch_name}</option>)}
+                  </select>
                   <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                     <option value="all">All status</option>
                     <option value="active">Active</option>

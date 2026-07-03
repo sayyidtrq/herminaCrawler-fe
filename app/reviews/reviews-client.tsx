@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { RefreshCcw } from "lucide-react";
 import { AppShell } from "../components/app-shell";
 import { DataTable, type DataTableColumn } from "../components/data-table";
@@ -19,15 +20,25 @@ type ReviewsPayload = {
 };
 
 export default function ReviewsClient() {
+  const searchParams = useSearchParams();
+  const initialLocationId = Number(searchParams.get("location_id")) || "";
   const [locations, setLocations] = useState<Location[]>([]);
   const [reviewsPayload, setReviewsPayload] = useState<ReviewsPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [keyword, setKeyword] = useState("");
-  const [locationId, setLocationId] = useState<number | "">("");
-  const [sentiment, setSentiment] = useState("all");
-  const [rating, setRating] = useState("all");
+  const [keyword, setKeyword] = useState(searchParams.get("keyword") ?? "");
+  const [locationId, setLocationId] = useState<number | "">(initialLocationId);
+  const [sentiment, setSentiment] = useState(searchParams.get("sentiment") ?? "all");
+  const [rating, setRating] = useState(searchParams.get("rating") ?? "all");
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+    setKeyword(searchParams.get("keyword") ?? "");
+    setLocationId(Number(searchParams.get("location_id")) || "");
+    setSentiment(searchParams.get("sentiment") ?? "all");
+    setRating(searchParams.get("rating") ?? "all");
+  }, [searchParams]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);

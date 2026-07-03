@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import ReviewsClient from "./reviews-client";
 
 export default function ReviewsPage() {
-  return <ReviewsClient />;
+  return (
+    <Suspense fallback={null}>
+      <ReviewsClient />
+    </Suspense>
+  );
 }
