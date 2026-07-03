@@ -27,10 +27,27 @@ export type DashboardMapMarker = {
 const INDONESIA_CENTER: [number, number] = [-2.5, 118];
 const INDONESIA_MAX_BOUNDS: [[number, number], [number, number]] = [[-13, 94], [8, 142]];
 
-function markerColor(risk: DashboardMapMarker["risk"]) {
-  if (risk === "critical") return "#e11d48";
-  if (risk === "watch") return "#f59e0b";
+type MapRiskLevel = "low" | "medium" | "high" | "very-high";
+
+function mapRiskLevel(marker: DashboardMapMarker): MapRiskLevel {
+  if (marker.risk === "stable") return "low";
+  if (marker.risk === "watch") return "medium";
+  if (marker.criticalCount > 1 || (marker.averageRating !== null && marker.averageRating < 3.5)) return "very-high";
+  return "high";
+}
+
+function markerColor(level: MapRiskLevel) {
+  if (level === "very-high") return "#e11d48";
+  if (level === "high") return "#f97316";
+  if (level === "medium") return "#f59e0b";
   return "#10b981";
+}
+
+function markerLabel(level: MapRiskLevel) {
+  if (level === "very-high") return "Risiko Sangat Tinggi";
+  if (level === "high") return "Risiko Tinggi";
+  if (level === "medium") return "Risiko Sedang";
+  return "Risiko Rendah";
 }
 
 function markerSize(marker: DashboardMapMarker) {
@@ -80,7 +97,8 @@ export function DashboardMap({ markers }: { markers: DashboardMapMarker[] }) {
         />
         <FitMapToMarkers markers={markers} />
         {markers.map((marker) => {
-          const color = markerColor(marker.risk);
+          const level = mapRiskLevel(marker);
+          const color = markerColor(level);
           return (
             <CircleMarker
               center={[marker.latitude, marker.longitude]}
@@ -100,18 +118,18 @@ export function DashboardMap({ markers }: { markers: DashboardMapMarker[] }) {
               stroke
               weight={2}
             >
-              <Tooltip className="dashboard-map-tooltip" direction="top" offset={[0, -10]} opacity={1}>
+              <Tooltip className="dashboard-map-tooltip" direction="auto" offset={[0, -8]} opacity={1}>
                 <div className="map-popup-content">
                   <strong>{marker.name}</strong>
-                  <span>{marker.city ?? "Kota belum diisi"} · {marker.source} · {marker.risk}</span>
-                  <p>{formatNumber(marker.reviews)} reviews · {marker.averageRating ? marker.averageRating.toFixed(1) : "No"} avg</p>
+                  <span>{marker.city ?? "Kota belum diisi"} · {markerLabel(level)}</span>
+                  <p>{formatNumber(marker.reviews)} review · {marker.averageRating ? `${marker.averageRating.toFixed(1)} rating` : "Belum ada rating"}</p>
                   <dl>
-                    <div className="hover-negative"><dt>Negative</dt><dd>{formatNumber(marker.negativeCount)}</dd></div>
-                    <div className="hover-critical"><dt>Critical</dt><dd>{formatNumber(marker.criticalCount)}</dd></div>
-                    <div className="hover-neutral"><dt>Top issue</dt><dd>{marker.topIssue ? issueLabel(marker.topIssue) : "None"}</dd></div>
-                    <div className="hover-neutral"><dt>Latest fetch</dt><dd>{marker.latestFetch}</dd></div>
+                    <div className="hover-negative"><dt>Negatif</dt><dd>{formatNumber(marker.negativeCount)}</dd></div>
+                    <div className="hover-critical"><dt>Kritis</dt><dd>{formatNumber(marker.criticalCount)}</dd></div>
+                    <div className="hover-neutral"><dt>Isu utama</dt><dd>{marker.topIssue ? issueLabel(marker.topIssue) : "Belum ada"}</dd></div>
+                    <div className="hover-neutral"><dt>Update</dt><dd>{marker.latestFetch}</dd></div>
                   </dl>
-                  <a href={`/reviews?location_id=${marker.id}`}>Buka review cabang</a>
+                  <em>Klik marker untuk membuka review cabang</em>
                 </div>
               </Tooltip>
             </CircleMarker>
@@ -119,10 +137,10 @@ export function DashboardMap({ markers }: { markers: DashboardMapMarker[] }) {
         })}
       </MapContainer>
       <div className="dashboard-map-legend" aria-label="Keterangan warna marker">
-        <span><i className="risk-stable" /> Stable</span>
-        <span><i className="risk-watch" /> Watch</span>
-        <span><i className="risk-critical" /> Critical</span>
-        <span><i className="risk-estimated" /> Koordinat estimasi</span>
+        <span><i className="risk-low" /> Risiko Rendah</span>
+        <span><i className="risk-medium" /> Risiko Sedang</span>
+        <span><i className="risk-high" /> Risiko Tinggi</span>
+        <span><i className="risk-very-high" /> Risiko Sangat Tinggi</span>
       </div>
     </div>
   );
