@@ -16,6 +16,7 @@ export default function FetchJobsClient() {
   const [logs, setLogs] = useState<FetchLog[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<number | "">("");
   const [targetReviewCount, setTargetReviewCount] = useState(50);
+  const [datePreset, setDatePreset] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isActionRunning, setIsActionRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -153,15 +154,26 @@ export default function FetchJobsClient() {
                 <span>Target Reviews</span>
                 <input type="number" min={1} max={300} value={targetReviewCount} onChange={(event) => setTargetReviewCount(Number(event.target.value))} />
               </label>
+              <label>
+                <span>Rentang Tanggal</span>
+                <select value={datePreset} onChange={(event) => setDatePreset(event.target.value)}>
+                  <option value="all">Semua tanggal</option>
+                  <option value="today">Hari ini</option>
+                  <option value="yesterday">Kemarin</option>
+                  <option value="last_7_days">7 hari terakhir</option>
+                  <option value="last_30_days">30 hari terakhir</option>
+                  <option value="this_month">Bulan ini</option>
+                </select>
+              </label>
               <div className="selected-location-card">
                 <strong>{selectedLocation?.branch_name ?? "Belum pilih lokasi"}</strong>
                 <span>{selectedLocation?.external_place_id ?? "Pilih location untuk melihat external place id."}</span>
               </div>
               <div className="button-row">
-                <button type="button" className="primary-action" disabled={isActionRunning || !selectedLocationId} onClick={() => runAction("Run Fetch", () => postJson("/api/fetch-jobs", { location_id: requireSelectedLocation(), source: settings?.review_source_mode, target_review_count: targetReviewCount }))}>
+                <button type="button" className="primary-action" disabled={isActionRunning || !selectedLocationId} onClick={() => runAction("Run Fetch", () => postJson("/api/fetch-jobs", { location_id: requireSelectedLocation(), source: settings?.review_source_mode, target_review_count: targetReviewCount, date_preset: datePreset === "all" ? undefined : datePreset }))}>
                   <Zap aria-hidden="true" size={15} /> Run Fetch
                 </button>
-                <button type="button" disabled={isActionRunning || !selectedLocationId} onClick={() => runAction("Dry Run Fetch", () => postJson("/api/fetch-jobs", { location_id: requireSelectedLocation(), source: settings?.review_source_mode, target_review_count: targetReviewCount, dry_run: true }))}>
+                <button type="button" disabled={isActionRunning || !selectedLocationId} onClick={() => runAction("Dry Run Fetch", () => postJson("/api/fetch-jobs", { location_id: requireSelectedLocation(), source: settings?.review_source_mode, target_review_count: targetReviewCount, dry_run: true, date_preset: datePreset === "all" ? undefined : datePreset }))}>
                   <Play aria-hidden="true" size={15} /> Dry Run
                 </button>
               </div>
@@ -182,10 +194,10 @@ export default function FetchJobsClient() {
               </div>
             </div>
             <div className="button-row module-actions">
-              <button type="button" className="primary-action" disabled={isActionRunning || activeLocations.length === 0} onClick={() => runAction("Fetch All Active", () => postJson("/api/fetch-jobs/all-active", { dry_run: false }))}>
+              <button type="button" className="primary-action" disabled={isActionRunning || activeLocations.length === 0} onClick={() => runAction("Fetch All Active", () => postJson("/api/fetch-jobs/all-active", { dry_run: false, date_preset: datePreset === "all" ? undefined : datePreset }))}>
                 Fetch all active
               </button>
-              <button type="button" disabled={isActionRunning || activeLocations.length === 0} onClick={() => runAction("Dry Run All Active", () => postJson("/api/fetch-jobs/all-active", { dry_run: true }))}>
+              <button type="button" disabled={isActionRunning || activeLocations.length === 0} onClick={() => runAction("Dry Run All Active", () => postJson("/api/fetch-jobs/all-active", { dry_run: true, date_preset: datePreset === "all" ? undefined : datePreset }))}>
                 Dry run all
               </button>
             </div>

@@ -30,6 +30,7 @@ export default function ReviewsClient() {
   const [locationId, setLocationId] = useState<number | "">(initialLocationId);
   const [sentiment, setSentiment] = useState(searchParams.get("sentiment") ?? "all");
   const [rating, setRating] = useState(searchParams.get("rating") ?? "all");
+  const [datePreset, setDatePreset] = useState(searchParams.get("date_preset") ?? "all");
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export default function ReviewsClient() {
     setLocationId(Number(searchParams.get("location_id")) || "");
     setSentiment(searchParams.get("sentiment") ?? "all");
     setRating(searchParams.get("rating") ?? "all");
+    setDatePreset(searchParams.get("date_preset") ?? "all");
   }, [searchParams]);
 
   const loadData = useCallback(async () => {
@@ -53,6 +55,7 @@ export default function ReviewsClient() {
       if (locationId) params.set("location_id", String(locationId));
       if (sentiment !== "all") params.set("sentiment", sentiment);
       if (rating !== "all") params.set("rating", rating);
+      if (datePreset !== "all") params.set("date_preset", datePreset);
 
       const [locationPayload, reviewPayload] = await Promise.all([
         fetchJson<{ items: Location[]; total: number }>("/api/locations"),
@@ -66,7 +69,7 @@ export default function ReviewsClient() {
     } finally {
       setIsLoading(false);
     }
-  }, [keyword, locationId, page, rating, sentiment]);
+  }, [datePreset, keyword, locationId, page, rating, sentiment]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -198,6 +201,14 @@ export default function ReviewsClient() {
                   <option value="3">3 stars</option>
                   <option value="2">2 stars</option>
                   <option value="1">1 star</option>
+                </select>
+                <select value={datePreset} onChange={(event) => { setPage(1); setDatePreset(event.target.value); }}>
+                  <option value="all">Semua tanggal</option>
+                  <option value="today">Hari ini</option>
+                  <option value="yesterday">Kemarin</option>
+                  <option value="last_7_days">7 hari terakhir</option>
+                  <option value="last_30_days">30 hari terakhir</option>
+                  <option value="this_month">Bulan ini</option>
                 </select>
               </>
             }

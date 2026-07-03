@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { API_BASE_URL } from "./api";
+import { API_BASE_URL, setUnauthorizedHandler } from "./api";
 
 // Update types.ts later if needed, but for now we define User here or import it
 export interface AuthUser {
@@ -85,6 +85,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
     router.push("/login");
   };
+
+  useEffect(() => {
+    setUnauthorizedHandler(logout);
+    return () => setUnauthorizedHandler(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
