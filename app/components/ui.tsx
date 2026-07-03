@@ -35,11 +35,11 @@ export function SectionHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="section-header">
+    <div className="section-header mb-6 border-b border-slate-100 pb-4">
       <div>
-        <p className="kicker">{kicker}</p>
-        <h2>{title}</h2>
-        {helper ? <span>{helper}</span> : null}
+        <p className="kicker text-sm font-bold uppercase tracking-widest text-emerald-600 mb-1">{kicker}</p>
+        <h2 className="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">{title}</h2>
+        {helper ? <span className="text-base text-slate-500 mt-2 block font-medium">{helper}</span> : null}
       </div>
       {action ? <div className="section-action">{action}</div> : null}
     </div>
