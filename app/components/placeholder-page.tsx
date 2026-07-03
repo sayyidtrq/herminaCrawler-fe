@@ -1,4 +1,4 @@
-``import { AppShell } from "./app-shell";
+import { AppShell } from "./app-shell";
 import { PageHeader } from "./ui";
 
 export function PlaceholderPage({
