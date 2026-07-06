@@ -31,6 +31,7 @@ export type DataTableProps<T> = {
   onPageChange?: (page: number) => void;
   manualPagination?: boolean;
   searchableText?: (row: T) => string;
+  hideToolbar?: boolean;
 };
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -54,6 +55,7 @@ export function DataTable<T>({
   onPageChange,
   manualPagination = false,
   searchableText,
+  hideToolbar = false,
 }: DataTableProps<T>) {
   const [internalSearch, setInternalSearch] = useState("");
   const [internalPage, setInternalPage] = useState(1);
@@ -95,23 +97,25 @@ export function DataTable<T>({
 
   return (
     <div className="data-table-shell">
-      <div className="data-table-toolbar">
-        <div className="data-table-titleblock">
-          {title ? <strong className="data-table-title">{title}</strong> : null}
-          {description ? <span className="data-table-description">{description}</span> : null}
+      {!hideToolbar && (
+        <div className="data-table-toolbar">
+          <div className="data-table-titleblock">
+            {title ? <strong className="data-table-title">{title}</strong> : null}
+            {description ? <span className="data-table-description">{description}</span> : null}
+          </div>
+          <div className="data-table-controls">
+            <label className="data-table-search">
+              <Search aria-hidden="true" size={15} />
+              <input
+                value={activeSearch}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={searchPlaceholder}
+              />
+            </label>
+            {filters ? <div className="data-table-filters">{filters}</div> : null}
+          </div>
         </div>
-        <div className="data-table-controls">
-          <label className="data-table-search">
-            <Search aria-hidden="true" size={15} />
-            <input
-              value={activeSearch}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={searchPlaceholder}
-            />
-          </label>
-          {filters ? <div className="data-table-filters">{filters}</div> : null}
-        </div>
-      </div>
+      )}
 
       <div className="data-table-scroll">
         <table className="data-table">
