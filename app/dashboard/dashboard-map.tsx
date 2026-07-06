@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { LatLngBoundsExpression } from "leaflet";
 import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap } from "react-leaflet";
 import { formatNumber } from "../lib/format";
@@ -28,6 +28,10 @@ const INDONESIA_CENTER: [number, number] = [-2.5, 118];
 const INDONESIA_MAX_BOUNDS: [[number, number], [number, number]] = [[-13, 94], [8, 142]];
 
 type MapRiskLevel = "low" | "medium" | "high" | "very-high";
+type DisplayMapMarker = DashboardMapMarker & {
+  displayLatitude: number;
+  displayLongitude: number;
+};
 
 function mapRiskLevel(marker: DashboardMapMarker): MapRiskLevel {
   if (marker.risk === "stable") return "low";
@@ -54,7 +58,34 @@ function markerSize(marker: DashboardMapMarker) {
   return Math.max(8, Math.min(20, 8 + Math.sqrt(marker.reviews || 1) * 1.15));
 }
 
-function FitMapToMarkers({ markers }: { markers: DashboardMapMarker[] }) {
+function spreadOverlappingMarkers(markers: DashboardMapMarker[]): DisplayMapMarker[] {
+  const groups = new Map<string, DashboardMapMarker[]>();
+
+  markers.forEach((marker) => {
+    const key = `${marker.latitude.toFixed(4)}:${marker.longitude.toFixed(4)}`;
+    groups.set(key, [...(groups.get(key) ?? []), marker]);
+  });
+
+  return markers.map((marker) => {
+    const key = `${marker.latitude.toFixed(4)}:${marker.longitude.toFixed(4)}`;
+    const group = groups.get(key) ?? [marker];
+    if (group.length === 1) {
+      return { ...marker, displayLatitude: marker.latitude, displayLongitude: marker.longitude };
+    }
+
+    const index = Math.max(0, group.findIndex((item) => item.id === marker.id));
+    const angle = (Math.PI * 2 * index) / group.length;
+    const radius = 0.024 + Math.min(group.length, 6) * 0.003;
+
+    return {
+      ...marker,
+      displayLatitude: marker.latitude + Math.sin(angle) * radius,
+      displayLongitude: marker.longitude + Math.cos(angle) * radius,
+    };
+  });
+}
+
+function FitMapToMarkers({ markers }: { markers: Array<{ latitude: number; longitude: number }> }) {
   const map = useMap();
 
   useEffect(() => {
@@ -78,6 +109,12 @@ function FitMapToMarkers({ markers }: { markers: DashboardMapMarker[] }) {
 }
 
 export function DashboardMap({ markers }: { markers: DashboardMapMarker[] }) {
+  const displayMarkers = useMemo(() => spreadOverlappingMarkers(markers), [markers]);
+  const fitMarkers = useMemo(
+    () => displayMarkers.map((marker) => ({ latitude: marker.displayLatitude, longitude: marker.displayLongitude })),
+    [displayMarkers],
+  );
+
   return (
     <div className="dashboard-map-shell">
       <MapContainer
@@ -95,13 +132,13 @@ export function DashboardMap({ markers }: { markers: DashboardMapMarker[] }) {
           attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <FitMapToMarkers markers={markers} />
-        {markers.map((marker) => {
+        <FitMapToMarkers markers={fitMarkers} />
+        {displayMarkers.map((marker) => {
           const level = mapRiskLevel(marker);
           const color = markerColor(level);
           return (
             <CircleMarker
-              center={[marker.latitude, marker.longitude]}
+              center={[marker.displayLatitude, marker.displayLongitude]}
               color="#ffffff"
               eventHandlers={{
                 click: () => {

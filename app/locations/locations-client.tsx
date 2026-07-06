@@ -71,7 +71,7 @@ function LocationMetric({
 }: {
   label: string;
   value: string;
-  helper: string;
+  helper?: string;
   tone?: "positive" | "danger" | "warning" | "info" | "neutral";
   icon: React.ReactNode;
 }) {
@@ -82,7 +82,7 @@ function LocationMetric({
         <i>{icon}</i>
       </div>
       <strong>{value}</strong>
-      <p>{helper}</p>
+      {helper ? <p>{helper}</p> : null}
     </article>
   );
 }
@@ -356,9 +356,8 @@ export default function LocationsClient() {
     <AppShell>
       <header className="page-header dashboard-hero-header">
         <div>
-          <p className="kicker">Locations</p>
+          <p className="kicker">Cabang</p>
           <h1>Registry Cabang Hermina</h1>
-          <span>Kelola cabang, sumber review, koordinat peta, dan status monitoring reputasi.</span>
         </div>
         <div className="dashboard-header-actions">
           <button type="button" className="ghost-action" onClick={() => void loadData()} disabled={!isMounted || isActionRunning || isLoading}>
@@ -374,41 +373,36 @@ export default function LocationsClient() {
       <ActionMessagePanel message={actionMessage} />
 
       {!isMounted ? (
-        <section className="panel page-panel"><EmptyState title="Menyiapkan halaman" detail="Menunggu client siap untuk mencegah hydration mismatch dari extension browser." /></section>
+        <section className="panel page-panel"><EmptyState title="Menyiapkan halaman" detail="Tampilan registry sedang dimuat." /></section>
       ) : (
         <section className="locations-page-stack">
           <section className="dashboard-kpi-strip location-summary-strip">
             <LocationMetric
               label="Total Cabang"
               value={formatNumber(locations.length)}
-              helper="Cabang tersimpan di registry"
               icon={<Building2 aria-hidden="true" size={16} />}
             />
             <LocationMetric
               label="Cabang Aktif"
               value={formatNumber(activeLocations)}
-              helper="Siap dipakai untuk fetch review"
               tone="positive"
               icon={<CheckCircle2 aria-hidden="true" size={16} />}
             />
             <LocationMetric
               label="Koordinat Perlu Dicek"
               value={formatNumber(missingCoordinates)}
-              helper="Berpengaruh ke peta dashboard"
               tone="warning"
               icon={<MapPin aria-hidden="true" size={16} />}
             />
             <LocationMetric
               label="Cabang Kritis"
               value={formatNumber(criticalBranches)}
-              helper="Preview dari review terbaru"
               tone="danger"
               icon={<AlertTriangle aria-hidden="true" size={16} />}
             />
             <LocationMetric
               label="Sumber Review"
               value={formatNumber(sourceCount)}
-              helper="Source aktif di data cabang"
               tone="info"
               icon={<DatabaseZap aria-hidden="true" size={16} />}
             />
@@ -421,7 +415,6 @@ export default function LocationsClient() {
                   <SectionHeader
                     kicker={editingLocationId ? "Edit Cabang" : "Tambah Cabang"}
                     title={editingLocationId ? "Update data cabang" : "Tambah cabang baru"}
-                    helper="Isi data utama cabang dulu, lalu lengkapi koordinat dan sumber review."
                   />
                   <button type="button" className="location-modal-close" onClick={resetLocationForm} disabled={isActionRunning} aria-label="Tutup form">
                     <X aria-hidden="true" size={18} />
@@ -442,7 +435,6 @@ export default function LocationsClient() {
                   <div className="location-form-section">
                     <div>
                       <strong>Informasi cabang</strong>
-                      <span>Identitas utama yang terlihat di registry dan dashboard.</span>
                     </div>
                     <div className="form-grid">
                       <label><span>Rumah sakit</span><input value={locationForm.hospital_name} onChange={(event) => updateLocationField("hospital_name", event.target.value)} /></label>
@@ -456,7 +448,6 @@ export default function LocationsClient() {
                   <div className="location-form-section">
                     <div>
                       <strong>Koordinat peta</strong>
-                      <span>Dipakai untuk marker dan sebaran risiko di dashboard.</span>
                     </div>
                     <div className="form-grid">
                       <label><span>Latitude</span><input value={locationForm.latitude} onChange={(event) => updateLocationField("latitude", event.target.value)} placeholder="-6.2416574" /></label>
@@ -465,7 +456,7 @@ export default function LocationsClient() {
                         <MapPin aria-hidden="true" size={18} />
                         <div>
                           <strong>{coordinateStatusLabel(locationFormCoordinateStatus)}</strong>
-                          <span>Range Indonesia: latitude -11 sampai 6, longitude 95 sampai 141.</span>
+                          <span>Batas Indonesia: latitude -11 sampai 6, longitude 95 sampai 141.</span>
                         </div>
                       </div>
                     </div>
@@ -474,10 +465,9 @@ export default function LocationsClient() {
                   <div className="location-form-section">
                     <div>
                       <strong>Sumber review</strong>
-                      <span>Konfigurasi scraping dan target review untuk cabang ini.</span>
                     </div>
                     <div className="form-grid">
-                      <label><span>Source</span><select value={locationForm.source} onChange={(event) => updateLocationField("source", event.target.value)}><option value="selenium">selenium</option><option value="selenium_google_maps">selenium_google_maps</option><option value="google_places">google_places</option><option value="mock">mock</option></select></label>
+                      <label><span>Sumber</span><select value={locationForm.source} onChange={(event) => updateLocationField("source", event.target.value)}><option value="selenium">selenium</option><option value="selenium_google_maps">selenium_google_maps</option><option value="google_places">google_places</option><option value="mock">mock</option></select></label>
                       <label><span>Target review</span><input type="number" min={1} max={300} value={locationForm.target_review_count} onChange={(event) => updateLocationField("target_review_count", Number(event.target.value))} /></label>
                       <label className="span-2"><span>External Place ID</span><input value={locationForm.external_place_id} onChange={(event) => updateLocationField("external_place_id", event.target.value)} placeholder="Google Maps place/data ID" required /></label>
                       <label className="span-2"><span>Google Maps URL</span><input value={locationForm.google_maps_url} onChange={(event) => updateLocationField("google_maps_url", event.target.value)} placeholder="https://maps.google.com/..." /></label>
@@ -498,20 +488,18 @@ export default function LocationsClient() {
 
           <article className="panel page-panel panel-wide location-registry-panel">
             <SectionHeader
-              kicker="Location Registry"
-              title={`${formatNumber(locations.length)} cabang terdaftar`}
-              helper="Risk preview berdasarkan review terbaru yang sudah termuat."
+              kicker="Registry Cabang"
+              title="Registry cabang"
             />
             <DataTable
               title="Data cabang"
-              description="Cari, filter, dan cek kesiapan cabang untuk dashboard map."
               data={filteredLocations}
               columns={locationColumns}
               getRowKey={(location) => location.id}
               isLoading={isLoading}
               emptyTitle="Belum ada cabang"
               emptyDetail="Tambah cabang pertama untuk mulai fetch review."
-              searchPlaceholder="Cari cabang, kota, source, atau place id..."
+              searchPlaceholder="Cari cabang..."
               pageSize={8}
               searchableText={(location) => [
                 location.hospital_name,

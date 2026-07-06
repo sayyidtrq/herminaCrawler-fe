@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   Bot,
   Building2,
@@ -9,6 +10,8 @@ import {
   FileChartColumn,
   LayoutDashboard,
   MessageSquareText,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   Sparkles,
   type LucideIcon,
@@ -33,6 +36,7 @@ const navItems: Array<{ label: string; href: string; icon: LucideIcon }> = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, isLoading, logout } = useAuth();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   if (isLoading) {
     return (
@@ -52,11 +56,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <aside className="sidebar">
+        <button
+          type="button"
+          className="sidebar-toggle"
+          onClick={() => setIsSidebarCollapsed((current) => !current)}
+          aria-label={isSidebarCollapsed ? "Tampilkan sidebar" : "Sembunyikan sidebar"}
+          title={isSidebarCollapsed ? "Tampilkan sidebar" : "Sembunyikan sidebar"}
+        >
+          {isSidebarCollapsed ? <PanelLeftOpen aria-hidden="true" size={16} /> : <PanelLeftClose aria-hidden="true" size={16} />}
+        </button>
         <Link className="brand-block" href="/dashboard">
           <div className="brand-mark">H</div>
-          <div>
+          <div className="brand-copy">
             <p>{user?.company_name || "Hermina"}</p>
             <strong>Review Intelligence</strong>
           </div>
@@ -71,14 +84,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             return (
               <Link className={pathname === href ? "active" : ""} href={href} key={href}>
                 <Icon aria-hidden="true" size={16} strokeWidth={2.15} />
-                {label}
+                <span>{label}</span>
               </Link>
             );
           })}
         </nav>
 
         {user && (
-          <div className="mt-auto border-t border-white/10 pt-4 flex flex-col gap-2">
+          <div className="sidebar-user-card mt-auto border-t border-white/10 pt-4 flex flex-col gap-2">
             <div className="px-2 text-xs">
               <span className="block font-semibold text-slate-200">{user.full_name || "Administrator"}</span>
               <span className="block text-slate-400 overflow-hidden text-ellipsis whitespace-nowrap">{user.email}</span>
@@ -88,7 +101,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-red-400 hover:bg-white/5 active:scale-95 transition-all w-full text-left"
             >
               <LogOut size={15} />
-              Keluar
+              <span>Keluar</span>
             </button>
           </div>
         )}
