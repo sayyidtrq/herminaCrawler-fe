@@ -340,11 +340,11 @@ export default function LoginPage() {
             </div>
 
           {/* Password */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Password</label>
-            <div className="relative mt-1.5">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
-                <Lock className="h-4 w-4" />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Password</label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                <Lock className="h-4.5 w-4.5" />
               </span>
               <input
                 type="password"
@@ -353,11 +353,11 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="block w-full rounded-lg border border-white/10 bg-white/5 py-2.5 pl-10 pr-3 text-sm text-white placeholder-slate-500 outline-none transition duration-200 focus:border-emerald-500 focus:bg-white/10 focus:ring-1 focus:ring-emerald-500"
+                className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-4 text-sm text-slate-800 placeholder-slate-400 shadow-sm outline-none transition-all focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 font-medium"
               />
             </div>
             {isRegister ? (
-              <p className="mt-1.5 text-xs text-slate-500">
+              <p className="mt-1 text-xs font-medium text-slate-500">
                 Minimal 8 karakter, kombinasi huruf dan angka.
               </p>
             ) : null}
