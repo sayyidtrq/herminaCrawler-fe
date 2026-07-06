@@ -144,7 +144,7 @@ export function DataTable<T>({
 
       {isLoading ? (
         <div className="data-table-empty">
-          <strong>Loading data</strong>
+          <strong>Memuat data</strong>
           <span>Mengambil data dari backend...</span>
         </div>
       ) : null}
@@ -157,16 +157,16 @@ export function DataTable<T>({
 
       <div className="data-table-footer">
         <span className="data-table-range">
-          Showing {visibleRows.length ? (activePage - 1) * pageSize + 1 : 0}-
-          {Math.min(activePage * pageSize, itemCount)} of {itemCount}
+          Menampilkan {visibleRows.length ? (activePage - 1) * pageSize + 1 : 0}-
+          {Math.min(activePage * pageSize, itemCount)} dari {itemCount}
         </span>
         <div className="data-table-pagination">
           <button type="button" disabled={activePage <= 1 || isLoading} onClick={() => setPage(Math.max(1, activePage - 1))}>
-            <ChevronLeft aria-hidden="true" size={15} /> Prev
+            <ChevronLeft aria-hidden="true" size={15} /> Sebelumnya
           </button>
-          <span>Page {activePage} / {totalPages}</span>
+          <span>Halaman {activePage} / {totalPages}</span>
           <button type="button" disabled={activePage >= totalPages || isLoading} onClick={() => setPage(Math.min(totalPages, activePage + 1))}>
-            Next <ChevronRight aria-hidden="true" size={15} />
+            Berikutnya <ChevronRight aria-hidden="true" size={15} />
           </button>
         </div>
       </div>
