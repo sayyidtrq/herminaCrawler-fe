@@ -43,6 +43,8 @@ export type LocationFormState = {
 };
 
 export type FetchLog = {
+  location_id?: number | null;
+  error_message?: string | null;
   id: number;
   location: string;
   source: string;

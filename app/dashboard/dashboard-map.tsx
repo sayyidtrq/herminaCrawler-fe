@@ -26,6 +26,7 @@ export type DashboardMapMarker = {
 
 const INDONESIA_CENTER: [number, number] = [-2.5, 118];
 const INDONESIA_MAX_BOUNDS: [[number, number], [number, number]] = [[-13, 94], [8, 142]];
+const MAP_MARKER_RADIUS = 11;
 
 type MapRiskLevel = "low" | "medium" | "high" | "very-high";
 type DisplayMapMarker = DashboardMapMarker & {
@@ -52,10 +53,6 @@ function markerLabel(level: MapRiskLevel) {
   if (level === "high") return "Risiko Tinggi";
   if (level === "medium") return "Risiko Sedang";
   return "Risiko Rendah";
-}
-
-function markerSize(marker: DashboardMapMarker) {
-  return Math.max(8, Math.min(20, 8 + Math.sqrt(marker.reviews || 1) * 1.15));
 }
 
 function spreadOverlappingMarkers(markers: DashboardMapMarker[]): DisplayMapMarker[] {
@@ -151,7 +148,7 @@ export function DashboardMap({ markers }: { markers: DashboardMapMarker[] }) {
               pathOptions={{
                 className: marker.isEstimatedCoordinate ? "dashboard-map-circle estimated" : "dashboard-map-circle",
               }}
-              radius={markerSize(marker)}
+              radius={MAP_MARKER_RADIUS}
               stroke
               weight={2}
             >

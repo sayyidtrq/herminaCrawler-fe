@@ -264,7 +264,6 @@ export default function DashboardClient() {
   const [riskFilter, setRiskFilter] = useState<DashboardRiskFilter>("all");
   const [branchSearch, setBranchSearch] = useState("");
   const [activeView, setActiveView] = useState<DashboardView>("map");
-  const [manualActionRows, setManualActionRows] = useState<ActionTrackerRow[]>([]);
   const [actionOverrides, setActionOverrides] = useState<Record<string, Partial<ActionTrackerRow>>>({});
   const [editingAction, setEditingAction] = useState<ActionTrackerRow | null>(null);
   const [actionEditForm, setActionEditForm] = useState({ action: "", pic: "", sla: "", status: "" });
@@ -560,9 +559,7 @@ export default function DashboardClient() {
     href: "/reviews",
     key: `${review.location}-${index}`,
   }));
-  const baseActionRows = manualActionRows.length || actionTrackerRows.length
-    ? [...manualActionRows, ...actionTrackerRows].slice(0, 5)
-    : defaultActionRows;
+  const baseActionRows = actionTrackerRows.length ? actionTrackerRows : defaultActionRows;
   const displayedActionRows = baseActionRows.map((row) => ({ ...row, ...(actionOverrides[row.key] ?? {}) }));
   const totalReviewHelper = metricHelperText({
     empty: totalReviewsValue === 0,
@@ -597,38 +594,6 @@ export default function DashboardClient() {
   const healthTone = isLoading ? "warning checking" : data?.health.status === "ok" ? "ok" : "warning";
   const healthLabel = isLoading ? "Cek sistem" : data?.health.status === "ok" ? "Sistem sehat" : "Sistem perlu dicek";
 
-  function reviewActionKey(review: Review) {
-    return `review-${review.id}`;
-  }
-
-  function scrollToActionTracker() {
-    window.requestAnimationFrame(() => {
-      document.getElementById("dashboard-action-followup")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
-
-  function createActionFromReview(review: Review) {
-    const key = reviewActionKey(review);
-    const row: ActionTrackerRow = {
-      key,
-      branch: review.location,
-      issue: review.issue_category,
-      action: review.recommended_action || "Hubungi pasien dan catat tindak lanjut review.",
-      unit: ownerUnitForIssue(review.issue_category),
-      pic: "Belum ditugaskan",
-      sla: review.urgency === "critical" || review.urgency === "high" || (review.rating ?? 5) <= 1 ? "4 jam" : "24 jam",
-      status: "Draft",
-      tone: "neutral",
-      href: `/reviews?location_id=${review.location_id}`,
-    };
-
-    setManualActionRows((current) => {
-      if (current.some((item) => item.key === key)) return current;
-      return [row, ...current].slice(0, 5);
-    });
-    scrollToActionTracker();
-  }
-
   function openActionEditor(row: ActionTrackerRow) {
     setEditingAction(row);
     setActionEditForm({
@@ -660,7 +625,6 @@ export default function DashboardClient() {
         <div>
           <p className="kicker">Dashboard</p>
           <h1>Pusat Pantau Review Indonesia</h1>
-          <span>Pantau reputasi cabang, sinyal kritis, dan prioritas tindak lanjut lintas lokasi Hermina.</span>
         </div>
         <div className="dashboard-header-actions">
           <span className={`health-pill ${healthTone}`}>{healthLabel}</span>
@@ -790,7 +754,7 @@ export default function DashboardClient() {
                 <>
                   <SectionHeader
                     kicker="Peta Risiko Cabang"
-                    title="Sebaran risiko cabang"
+                    title="Sebaran Risiko Cabang"
                     action={<span className="map-meta">{formatNumber(mapMarkers.length)} lokasi tampil</span>}
                   />
                   {isLoading ? <EmptyState title="Memuat peta" detail="Mengambil data cabang terbaru." /> : null}
@@ -913,62 +877,16 @@ export default function DashboardClient() {
               )}
             </article>
 
-          </div>
-
-          {activeView === "map" ? (
-            <aside className="panel page-panel risk-panel">
-              <SectionHeader
-                kicker="Ringkasan Risiko"
-                title={priorityBranches.length ? `${formatNumber(priorityBranches.length)} cabang perlu dipantau` : "Semua cabang stabil"}
-                helper={`Update terakhir: ${formatDate(data?.latestFetch.item?.started_at)}`}
-              />
-              <dl className="risk-snapshot">
-                <div className="metric-danger"><dt>Kritis</dt><dd>{formatNumber(criticalBranchCount)}</dd></div>
-                <div className="metric-warning"><dt>Perlu dipantau</dt><dd>{formatNumber(watchBranchCount)}</dd></div>
-                <div className="metric-neutral"><dt>Isu utama</dt><dd>{topIssues[0] ? issueLabel(topIssues[0].issue) : "Belum ada"}</dd></div>
-                <div className="metric-info"><dt>Cakupan AI</dt><dd>{analysisCoverage}%</dd></div>
-              </dl>
-              <div className="risk-list-heading">
-                <div>
-                  <strong>Prioritas cabang</strong>
-                </div>
-                <a href="/reviews">Lihat semua review</a>
-              </div>
-              <div className="risk-summary-list">
-                {rankedBranches.slice(0, 5).map((branch) => (
-                  <a className="risk-summary-row" href={`/reviews?location_id=${branch.id}`} key={branch.id}>
-                    <div>
-                      <strong>{branch.name}</strong>
-                      <span>{branch.city ?? "Tanpa kota"} · {formatNumber(branch.reviews)} review</span>
-                    </div>
-                    <Badge tone={branch.risk === "critical" ? "critical" : branch.risk === "watch" ? "warning" : "positive"}>
-                      {riskLabel(branch.risk)}
-                    </Badge>
-                  </a>
-                ))}
-              </div>
-              <div className="priority-action-list compact">
-                <a href="/analysis"><Activity aria-hidden="true" size={14} /> Analisis {formatNumber(data?.overview.pending_analysis)} review tertunda</a>
-                <a href="/fetch-jobs"><DatabaseZap aria-hidden="true" size={14} /> Update review cabang aktif</a>
-                <a href="/locations"><Building2 aria-hidden="true" size={14} /> Lengkapi {formatNumber(missingCoordinates)} koordinat</a>
-              </div>
-            </aside>
-          ) : null}
-        </section>
-
-        {activeView === "map" ? (
-          <section className="map-followup-grid">
-            <div className="map-followup-left">
-              <article className="panel page-panel recent-negative-panel">
-                <SectionHeader
-                  kicker="Review Negatif Terbaru"
-                  title="Review negatif terbaru"
-                  action={<a className="map-meta" href="/reviews?rating_max=2">Lihat semua</a>}
-                />
-                <div className="recent-negative-list">
-                  {recentNegativeReviews.map((review) => {
-                    const actionExists = displayedActionRows.some((row) => row.key === reviewActionKey(review));
-                    return (
+            {activeView === "map" ? (
+              <>
+                <article className="panel page-panel recent-negative-panel">
+                  <SectionHeader
+                    kicker="Review Negatif Terbaru"
+                    title="Review Negatif Terbaru"
+                    action={<a className="map-meta" href="/reviews?rating_max=2">Lihat semua</a>}
+                  />
+                  <div className="recent-negative-list">
+                    {recentNegativeReviews.map((review) => (
                       <article className="recent-negative-row" key={review.id}>
                         <div className="negative-signal-icon">
                           <Frown aria-hidden="true" size={15} />
@@ -982,72 +900,109 @@ export default function DashboardClient() {
                           <p>{reviewExcerpt(review.review_text)}</p>
                         </div>
                         <div className="review-inbox-actions">
-                          <a href={`/reviews?location_id=${review.location_id}`}>Balas</a>
-                          <button type="button" onClick={() => createActionFromReview(review)}>
-                            {actionExists ? "Action dibuat" : "Buat action"}
-                          </button>
+                          <a href={`/onebox-pr?mode=create&review_id=${review.id}`}>Buat action</a>
+                          <a className="secondary" href={`/onebox-pr?mode=assign&review_id=${review.id}`}>Assign</a>
                         </div>
                       </article>
-                    );
-                  })}
-                  {!isLoading && recentNegativeReviews.length === 0 ? (
-                    <EmptyState title="Belum ada review negatif" detail="Tidak ada review rating 1-2 pada filter ini." />
-                  ) : null}
-                </div>
-              </article>
-
-              <article className="panel page-panel branch-distribution-panel monitoring-panel">
-                <SectionHeader
-                  kicker="Monitoring Cabang"
-                  title="Monitoring cabang"
-                />
-                <div className="monitoring-table">
-                  <div className="monitoring-head">
-                    <span>Cabang</span>
-                    <span>Rating</span>
-                    <span>Total review</span>
-                    <span>Review negatif</span>
-                    <span>Belum dibalas</span>
-                    <span>Review terakhir</span>
-                    <span>Status</span>
+                    ))}
+                    {!isLoading && recentNegativeReviews.length === 0 ? (
+                      <EmptyState title="Belum ada review negatif" detail="Tidak ada review rating 1-2 pada filter ini." />
+                    ) : null}
                   </div>
-                  {rankedBranches.slice(0, 5).map((branch) => {
-                    const negativePercent = branch.reviews ? Math.round((branch.negativeCount / branch.reviews) * 100) : 0;
-                    return (
-                      <a className="monitoring-row" href={`/reviews?location_id=${branch.id}`} key={branch.id}>
-                        <span className="monitoring-branch">
-                          <MapPin aria-hidden="true" size={14} />
-                          <strong>{branch.name}</strong>
-                        </span>
-                        <span className="monitoring-rating">
-                          <b>{branch.averageRating ? branch.averageRating.toFixed(1) : "—"}</b>
-                          <RatingStars rating={branch.averageRating} />
-                        </span>
-                        <span>{formatNumber(branch.reviews)}</span>
-                        <span>{formatNumber(branch.negativeCount)} ({negativePercent}%)</span>
-                        <span>{formatNumber(branch.unansweredCount)}</span>
-                        <span>{branch.latestReview}</span>
-                        <Badge tone={branch.risk === "critical" ? "critical" : branch.risk === "watch" ? "warning" : "positive"}>
-                          {monitoringStatusLabel(branch.risk)}
-                        </Badge>
-                      </a>
-                    );
-                  })}
-                  {!isLoading && rankedBranches.length === 0 ? (
-                    <EmptyState title="Belum ada cabang" detail="Tidak ada cabang pada filter ini." />
-                  ) : null}
+                </article>
+
+                <article className="panel page-panel branch-distribution-panel monitoring-panel">
+                  <SectionHeader
+                    kicker="Monitoring Cabang"
+                    title="Monitoring Cabang"
+                  />
+                  <div className="monitoring-table">
+                    <div className="monitoring-head">
+                      <span>Cabang</span>
+                      <span>Rating</span>
+                      <span>Total review</span>
+                      <span>Review negatif</span>
+                      <span>Belum dibalas</span>
+                      <span>Review terakhir</span>
+                      <span>Status</span>
+                    </div>
+                    {rankedBranches.slice(0, 5).map((branch) => {
+                      const negativePercent = branch.reviews ? Math.round((branch.negativeCount / branch.reviews) * 100) : 0;
+                      return (
+                        <a className="monitoring-row" href={`/reviews?location_id=${branch.id}`} key={branch.id}>
+                          <span className="monitoring-branch">
+                            <MapPin aria-hidden="true" size={14} />
+                            <strong>{branch.name}</strong>
+                          </span>
+                          <span className="monitoring-rating">
+                            <b>{branch.averageRating ? branch.averageRating.toFixed(1) : "—"}</b>
+                            <RatingStars rating={branch.averageRating} />
+                          </span>
+                          <span>{formatNumber(branch.reviews)}</span>
+                          <span>{formatNumber(branch.negativeCount)} ({negativePercent}%)</span>
+                          <span>{formatNumber(branch.unansweredCount)}</span>
+                          <span>{branch.latestReview}</span>
+                          <Badge tone={branch.risk === "critical" ? "critical" : branch.risk === "watch" ? "warning" : "positive"}>
+                            {monitoringStatusLabel(branch.risk)}
+                          </Badge>
+                        </a>
+                      );
+                    })}
+                    {!isLoading && rankedBranches.length === 0 ? (
+                      <EmptyState title="Belum ada cabang" detail="Tidak ada cabang pada filter ini." />
+                    ) : null}
+                  </div>
+                  <div className="monitoring-footer">
+                    <a href="/locations">Lihat semua cabang</a>
+                  </div>
+                </article>
+              </>
+            ) : null}
+
+          </div>
+
+          {activeView === "map" ? (
+            <aside className="dashboard-side-column">
+              <article className="panel page-panel risk-panel">
+                <SectionHeader
+                  kicker="Ringkasan Risiko"
+                  title={priorityBranches.length ? `${formatNumber(priorityBranches.length)} Cabang Perlu Dipantau` : "Semua Cabang Stabil"}
+                  helper={`Update terakhir: ${formatDate(data?.latestFetch.item?.started_at)}`}
+                />
+                <dl className="risk-snapshot">
+                  <div className="metric-danger"><dt>Kritis</dt><dd>{formatNumber(criticalBranchCount)}</dd></div>
+                  <div className="metric-warning"><dt>Perlu dipantau</dt><dd>{formatNumber(watchBranchCount)}</dd></div>
+                  <div className="metric-neutral"><dt>Isu utama</dt><dd>{topIssues[0] ? issueLabel(topIssues[0].issue) : "Belum ada"}</dd></div>
+                  <div className="metric-info"><dt>Cakupan AI</dt><dd>{analysisCoverage}%</dd></div>
+                </dl>
+                <div className="risk-list-heading">
+                  <div>
+                    <strong>Prioritas cabang</strong>
+                  </div>
+                  <a href="/reviews">Lihat semua review</a>
                 </div>
-                <div className="monitoring-footer">
-                  <a href="/locations">Lihat semua cabang</a>
+                <div className="risk-summary-list">
+                  {rankedBranches.slice(0, 3).map((branch) => (
+                    <a className="risk-summary-row" href={`/reviews?location_id=${branch.id}`} key={branch.id}>
+                      <strong>{branch.name}</strong>
+                      <span>{branch.city ?? "Tanpa kota"} · {formatNumber(branch.reviews)} review</span>
+                      <Badge tone={branch.risk === "critical" ? "critical" : branch.risk === "watch" ? "warning" : "positive"}>
+                        {riskLabel(branch.risk)}
+                      </Badge>
+                    </a>
+                  ))}
+                </div>
+                <div className="priority-action-list compact">
+                  <a href="/analysis"><Activity aria-hidden="true" size={14} /> Analisis {formatNumber(data?.overview.pending_analysis)} review tertunda</a>
+                  <a href="/fetch-jobs"><DatabaseZap aria-hidden="true" size={14} /> Update review cabang aktif</a>
+                  <a href="/locations"><Building2 aria-hidden="true" size={14} /> Lengkapi {formatNumber(missingCoordinates)} koordinat</a>
                 </div>
               </article>
-            </div>
 
-            <aside className="map-followup-right">
-              <article className="panel page-panel insight-tab-card">
+              <article className="panel page-panel risk-ai-panel">
                 <SectionHeader
                   kicker="AI Insight Summary"
-                  title="Ringkasan insight AI"
+                  title="Ringkasan Insight AI"
                   action={<a className="map-meta" href="/insights">Buka Insights</a>}
                 />
                 <div className="insight-risk-block">
@@ -1102,10 +1057,13 @@ export default function DashboardClient() {
                 </div>
               </article>
             </aside>
+          ) : null}
+        </section>
 
-            <div className="dashboard-action-followup-section" id="dashboard-action-followup">
+        {activeView === "map" ? (
+          <section className="dashboard-action-followup-section" id="dashboard-action-followup">
               <article className="panel page-panel insight-tab-card">
-                <SectionHeader kicker="Tindak Lanjut" title="Action & follow up terintegrasi" />
+                <SectionHeader kicker="Tindak Lanjut" title="Action & Follow Up Terintegrasi" />
                 <div className="action-followup-table">
                   <div className="action-followup-head">
                     <span>Sumber</span>
@@ -1139,8 +1097,6 @@ export default function DashboardClient() {
                   ) : null}
                 </div>
               </article>
-            </div>
-
           </section>
         ) : null}
 
