@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { createPortal } from "react-dom";
+import { ChevronLeft, ChevronRight, Filter, Search, X, XCircle } from "lucide-react";
 
 export type DataTableColumn<T> = {
   id: string;
@@ -25,6 +26,9 @@ export type DataTableProps<T> = {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   filters?: ReactNode;
+  extendedFilters?: ReactNode;
+  extendedFilterTitle?: string;
+  onResetFilters?: () => void;
   page?: number;
   pageSize?: number;
   totalItems?: number;
@@ -49,6 +53,9 @@ export function DataTable<T>({
   searchValue,
   onSearchChange,
   filters,
+  extendedFilters,
+  extendedFilterTitle = "Extended Filters",
+  onResetFilters,
   page,
   pageSize = DEFAULT_PAGE_SIZE,
   totalItems,
@@ -59,6 +66,7 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   const [internalSearch, setInternalSearch] = useState("");
   const [internalPage, setInternalPage] = useState(1);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const activeSearch = searchValue ?? internalSearch;
   const activePage = page ?? internalPage;
@@ -89,20 +97,74 @@ export function DataTable<T>({
 
   const itemCount = totalItems ?? filteredData.length;
   const totalPages = Math.max(1, Math.ceil(itemCount / pageSize));
+  const hasTitleBlock = Boolean(title || description);
   const visibleRows = useMemo(() => {
     if (manualPagination) return filteredData;
     const start = (activePage - 1) * pageSize;
     return filteredData.slice(start, start + pageSize);
   }, [activePage, filteredData, manualPagination, pageSize]);
 
+  const filterDrawer =
+    extendedFilters && isFilterOpen ? (
+      <div className="extended-filter-backdrop" role="presentation" onMouseDown={() => setIsFilterOpen(false)}>
+        <aside
+          className="extended-filter-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-label={extendedFilterTitle}
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <div className="extended-filter-header">
+            <div>
+              <Filter aria-hidden="true" size={22} />
+              <strong>{extendedFilterTitle}</strong>
+            </div>
+            <button type="button" aria-label="Tutup filter" onClick={() => setIsFilterOpen(false)}>
+              <X aria-hidden="true" size={22} />
+            </button>
+          </div>
+          <div className="extended-filter-body">
+            <label>
+              <span>Pencarian spesifik</span>
+              <div className="extended-filter-search">
+                <Search aria-hidden="true" size={16} />
+                <input
+                  value={activeSearch}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={searchPlaceholder}
+                />
+              </div>
+            </label>
+            {extendedFilters}
+          </div>
+          <div className="extended-filter-footer">
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                onResetFilters?.();
+              }}
+            >
+              Reset
+            </button>
+            <button type="button" className="primary" onClick={() => setIsFilterOpen(false)}>
+              Terapkan Filter
+            </button>
+          </div>
+        </aside>
+      </div>
+    ) : null;
+
   return (
-    <div className="data-table-shell">
+    <div className={`data-table-shell${hasTitleBlock ? "" : " data-table-shell-filter-only"}`}>
       {!hideToolbar && (
         <div className="data-table-toolbar">
-          <div className="data-table-titleblock">
-            {title ? <strong className="data-table-title">{title}</strong> : null}
-            {description ? <span className="data-table-description">{description}</span> : null}
-          </div>
+          {hasTitleBlock ? (
+            <div className="data-table-titleblock">
+              {title ? <strong className="data-table-title">{title}</strong> : null}
+              {description ? <span className="data-table-description">{description}</span> : null}
+            </div>
+          ) : null}
           <div className="data-table-controls">
             <label className="data-table-search">
               <Search aria-hidden="true" size={15} />
@@ -112,10 +174,35 @@ export function DataTable<T>({
                 placeholder={searchPlaceholder}
               />
             </label>
+            {extendedFilters ? (
+              <button
+                type="button"
+                className="extended-filter-trigger"
+                onClick={() => setIsFilterOpen(true)}
+                aria-label="Buka extended filters"
+                title="Extended Filters"
+              >
+                <Filter aria-hidden="true" size={17} />
+              </button>
+            ) : null}
             {filters ? <div className="data-table-filters">{filters}</div> : null}
+            {onResetFilters ? (
+              <button
+                type="button"
+                className="data-table-reset"
+                onClick={() => {
+                  setSearch("");
+                  onResetFilters();
+                }}
+              >
+                <XCircle aria-hidden="true" size={15} /> Reset
+              </button>
+            ) : null}
           </div>
         </div>
       )}
+
+      {filterDrawer && typeof document !== "undefined" ? createPortal(filterDrawer, document.body) : null}
 
       <div className="data-table-scroll">
         <table className="data-table">

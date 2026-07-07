@@ -393,6 +393,19 @@ export default function DashboardClient() {
       return b.negativeCount - a.negativeCount;
     });
   }, [visibleBranches]);
+  const monitoringBranches = useMemo(
+    () =>
+      [...visibleBranches]
+        .sort((a, b) => {
+          const reviewDiff = b.reviews - a.reviews;
+          if (reviewDiff) return reviewDiff;
+          const negativeDiff = b.negativeCount - a.negativeCount;
+          if (negativeDiff) return negativeDiff;
+          return a.name.localeCompare(b.name);
+        })
+        .slice(0, 5),
+    [visibleBranches],
+  );
   const averageRating = useMemo(() => {
     const ratings = scopedReviews
       .map((review) => review.rating)
@@ -926,7 +939,7 @@ export default function DashboardClient() {
                       <span>Review terakhir</span>
                       <span>Status</span>
                     </div>
-                    {rankedBranches.slice(0, 5).map((branch) => {
+                    {monitoringBranches.map((branch) => {
                       const negativePercent = branch.reviews ? Math.round((branch.negativeCount / branch.reviews) * 100) : 0;
                       return (
                         <a className="monitoring-row" href={`/reviews?location_id=${branch.id}`} key={branch.id}>
@@ -948,7 +961,7 @@ export default function DashboardClient() {
                         </a>
                       );
                     })}
-                    {!isLoading && rankedBranches.length === 0 ? (
+                    {!isLoading && monitoringBranches.length === 0 ? (
                       <EmptyState title="Belum ada cabang" detail="Tidak ada cabang pada filter ini." />
                     ) : null}
                   </div>
