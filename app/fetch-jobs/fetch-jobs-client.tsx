@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   DatabaseZap,
   ListChecks,
   MapPin,
@@ -69,13 +70,28 @@ export default function FetchJobsClient() {
   const [selectedSource, setSelectedSource] = useState("");
   const [targetReviewCount, setTargetReviewCount] = useState(50);
   const [datePreset, setDatePreset] = useState("all");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+  const [locationPickerQuery, setLocationPickerQuery] = useState("");
+  const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionRunning, setIsActionRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<ActionMessage | null>(null);
   const [statusTab, setStatusTab] = useState("all");
   const [logLocationFilter, setLogLocationFilter] = useState<number | "">("");
+  const [logLocationPickerQuery, setLogLocationPickerQuery] = useState("Semua lokasi");
+  const [isLogLocationPickerOpen, setIsLogLocationPickerOpen] = useState(false);
   const [logSourceFilter, setLogSourceFilter] = useState("all");
+  const [logDatePreset, setLogDatePreset] = useState("all");
+  const [logStartDate, setLogStartDate] = useState("");
+  const [logEndDate, setLogEndDate] = useState("");
+  const [logResultFilter, setLogResultFilter] = useState("all");
+  const [logFetchedFilter, setLogFetchedFilter] = useState("all");
+  const [logInsertedFilter, setLogInsertedFilter] = useState("all");
+  const [logDuplicateFilter, setLogDuplicateFilter] = useState("all");
+  const [logErrorFilter, setLogErrorFilter] = useState("all");
+  const [logSortFilter, setLogSortFilter] = useState("newest");
 
   const loadData = useCallback(async (options?: { silent?: boolean }) => {
     if (!options?.silent) setIsLoading(true);
@@ -89,7 +105,6 @@ export default function FetchJobsClient() {
       setLocations(locationPayload.items);
       setSettings(settingsPayload);
       setLogs(logPayload.items);
-      setSelectedLocationId((current) => current || locationPayload.items.find((item) => item.is_active)?.id || "");
       setSelectedSource((current) => current || settingsPayload.review_source_mode || locationPayload.items.find((item) => item.source)?.source || "mock");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Backend tidak merespons.");
@@ -131,10 +146,49 @@ export default function FetchJobsClient() {
     return selectedLocationId;
   }
 
+  function buildFetchPayload(options?: { dryRun?: boolean; locationId?: number | "" }) {
+    return {
+      location_id: options?.locationId || requireSelectedLocation(),
+      source: selectedSource || settings?.review_source_mode,
+      target_review_count: targetReviewCount,
+      dry_run: options?.dryRun || undefined,
+      date_preset: datePreset === "all" || datePreset === "custom" ? undefined : datePreset,
+      start_date: datePreset === "custom" && customStartDate ? customStartDate : undefined,
+      end_date: datePreset === "custom" && customEndDate ? customEndDate : undefined,
+    };
+  }
+
+  function buildBatchPayload(options?: { dryRun?: boolean }) {
+    return {
+      dry_run: options?.dryRun || false,
+      date_preset: datePreset === "all" || datePreset === "custom" ? undefined : datePreset,
+      start_date: datePreset === "custom" && customStartDate ? customStartDate : undefined,
+      end_date: datePreset === "custom" && customEndDate ? customEndDate : undefined,
+    };
+  }
+
   const selectedLocation = useMemo(
     () => locations.find((location) => location.id === selectedLocationId) ?? null,
     [locations, selectedLocationId],
   );
+  const selectableLocations = useMemo(() => {
+    const query = locationPickerQuery.trim().toLowerCase();
+    if (!query) return locations;
+    return locations.filter((location) =>
+      [location.branch_name, location.city, location.source, location.external_place_id]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    );
+  }, [locationPickerQuery, locations]);
+  const logLocationOptions = useMemo(() => {
+    const query = logLocationPickerQuery.trim().toLowerCase();
+    if (!query || query === "semua lokasi") return locations;
+    return locations.filter((location) =>
+      [location.branch_name, location.city, location.source, location.external_place_id]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    );
+  }, [locations, logLocationPickerQuery]);
   const activeLocations = locations.filter((location) => location.is_active);
   const latestLog = logs[0] ?? null;
   const successCount = logs.filter((log) => log.status === "success").length;
@@ -161,13 +215,67 @@ export default function FetchJobsClient() {
   }, [logStatuses, logs]);
 
   const filteredLogs = useMemo(() => {
+    const dateMatches = (log: FetchLog) => {
+      const timestamp = log.started_at ? new Date(log.started_at).getTime() : 0;
+      if (!timestamp) return logDatePreset === "all";
+      const now = new Date();
+      if (logDatePreset === "today") return new Date(timestamp).toDateString() === now.toDateString();
+      if (logDatePreset === "last_7_days") return timestamp >= now.getTime() - 7 * 24 * 60 * 60 * 1000;
+      if (logDatePreset === "last_30_days") return timestamp >= now.getTime() - 30 * 24 * 60 * 60 * 1000;
+      if (logDatePreset === "custom") {
+        const start = logStartDate ? new Date(`${logStartDate}T00:00:00`).getTime() : 0;
+        const end = logEndDate ? new Date(`${logEndDate}T23:59:59`).getTime() : Number.POSITIVE_INFINITY;
+        return timestamp >= start && timestamp <= end;
+      }
+      return true;
+    };
+
+    const resultMatches = (log: FetchLog) => {
+      const totalFailed = log.total_failed ?? 0;
+      const totalInserted = log.total_inserted ?? 0;
+      if (logResultFilter === "with_failed") return totalFailed > 0 || log.status === "failed";
+      if (logResultFilter === "with_inserted") return totalInserted > 0;
+      if (logResultFilter === "empty") return totalInserted === 0 && totalFailed === 0;
+      return true;
+    };
+    const numberMatches = (value: number | null | undefined, filter: string) => {
+      const total = value ?? 0;
+      if (filter === "zero") return total === 0;
+      if (filter === "one_plus") return total > 0;
+      if (filter === "ten_plus") return total >= 10;
+      if (filter === "fifty_plus") return total >= 50;
+      return true;
+    };
+    const errorMatches = (log: FetchLog) => {
+      if (logErrorFilter === "with_error") return Boolean(log.error_message?.trim()) || (log.total_failed ?? 0) > 0;
+      if (logErrorFilter === "without_error") return !log.error_message?.trim() && (log.total_failed ?? 0) === 0;
+      return true;
+    };
+
     return logs.filter((log) => {
       const matchesStatus = statusTab === "all" || log.status === statusTab;
       const matchesLocation = !logLocationFilter || log.location_id === logLocationFilter;
       const matchesSource = logSourceFilter === "all" || log.source === logSourceFilter;
-      return matchesStatus && matchesLocation && matchesSource;
+      return (
+        matchesStatus &&
+        matchesLocation &&
+        matchesSource &&
+        dateMatches(log) &&
+        resultMatches(log) &&
+        numberMatches(log.total_fetched, logFetchedFilter) &&
+        numberMatches(log.total_inserted, logInsertedFilter) &&
+        numberMatches(log.total_duplicate, logDuplicateFilter) &&
+        errorMatches(log)
+      );
+    }).sort((a, b) => {
+      if (logSortFilter === "oldest") {
+        return new Date(a.started_at ?? 0).getTime() - new Date(b.started_at ?? 0).getTime();
+      }
+      if (logSortFilter === "failed_desc") return (b.total_failed ?? 0) - (a.total_failed ?? 0);
+      if (logSortFilter === "inserted_desc") return (b.total_inserted ?? 0) - (a.total_inserted ?? 0);
+      return new Date(b.started_at ?? 0).getTime() - new Date(a.started_at ?? 0).getTime();
     });
-  }, [logLocationFilter, logSourceFilter, logs, statusTab]);
+  }, [logDatePreset, logDuplicateFilter, logEndDate, logErrorFilter, logFetchedFilter, logInsertedFilter, logLocationFilter, logResultFilter, logSortFilter, logSourceFilter, logStartDate, logs, statusTab]);
 
   const logColumns: Array<DataTableColumn<FetchLog>> = [
     {
@@ -268,26 +376,45 @@ export default function FetchJobsClient() {
                 title="Fetch Satu Lokasi"
               />
 
-              <div className="fetch-location-grid">
-                {locations.map((location) => (
-                  <button
-                    type="button"
-                    key={location.id}
-                    className={`fetch-location-card${location.id === selectedLocationId ? " active" : ""}`}
-                    onClick={() => setSelectedLocationId(location.id)}
-                    disabled={isActionRunning}
-                  >
-                    <strong><MapPin aria-hidden="true" size={13} /> {location.branch_name}</strong>
-                    <span>{location.city ?? "Tanpa kota"} · {location.source}</span>
-                    <Badge tone={location.is_active ? "positive" : "neutral"}>{location.is_active ? "Aktif" : "Nonaktif"}</Badge>
-                  </button>
-                ))}
-                {locations.length === 0 ? (
-                  <EmptyState title="Belum ada lokasi" detail="Tambah cabang dulu di halaman Locations." />
-                ) : null}
-              </div>
-
               <div className="action-controls fetch-controls">
+                <label className="fetch-location-selector">
+                  <span>Pilih lokasi</span>
+                  <div className="location-combobox">
+                    <input
+                      value={locationPickerQuery}
+                      onFocus={() => setIsLocationPickerOpen(true)}
+                      onChange={(event) => {
+                        setLocationPickerQuery(event.target.value);
+                        setSelectedLocationId("");
+                        setIsLocationPickerOpen(true);
+                      }}
+                      placeholder="Cari cabang atau kota..."
+                      disabled={isActionRunning}
+                    />
+                    <button type="button" onClick={() => setIsLocationPickerOpen((current) => !current)} disabled={isActionRunning}>
+                      <ChevronDown aria-hidden="true" size={17} />
+                    </button>
+                    {isLocationPickerOpen ? (
+                      <div className="location-combobox-menu">
+                        {selectableLocations.slice(0, 8).map((location) => (
+                          <button
+                            type="button"
+                            key={location.id}
+                            onClick={() => {
+                              setSelectedLocationId(location.id);
+                              setLocationPickerQuery(location.branch_name);
+                              setIsLocationPickerOpen(false);
+                            }}
+                          >
+                            <strong>{location.branch_name}</strong>
+                            <span>{location.city ?? "Tanpa kota"} · {location.source}</span>
+                          </button>
+                        ))}
+                        {selectableLocations.length === 0 ? <p>Tidak ada cabang yang cocok.</p> : null}
+                      </div>
+                    ) : null}
+                  </div>
+                </label>
                 <label>
                   <span>Sumber</span>
                   <select value={selectedSource} onChange={(event) => setSelectedSource(event.target.value)}>
@@ -307,17 +434,30 @@ export default function FetchJobsClient() {
                     <option value="last_7_days">7 hari terakhir</option>
                     <option value="last_30_days">30 hari terakhir</option>
                     <option value="this_month">Bulan ini</option>
+                    <option value="custom">Tanggal spesifik</option>
                   </select>
                 </label>
+                {datePreset === "custom" ? (
+                  <div className="fetch-date-range">
+                    <label>
+                      <span>Mulai</span>
+                      <input type="date" value={customStartDate} onChange={(event) => setCustomStartDate(event.target.value)} />
+                    </label>
+                    <label>
+                      <span>Sampai</span>
+                      <input type="date" value={customEndDate} onChange={(event) => setCustomEndDate(event.target.value)} />
+                    </label>
+                  </div>
+                ) : null}
                 <div className="selected-location-card">
                   <strong>{selectedLocation?.branch_name ?? "Belum pilih lokasi"}</strong>
                   <span>{selectedLocation?.external_place_id ?? "Pilih lokasi di atas untuk melihat external place id."}</span>
                 </div>
                 <div className="button-row">
-                  <button type="button" className="primary-action" disabled={isActionRunning || !selectedLocationId} onClick={() => runAction("Run Fetch", () => postJson("/api/fetch-jobs", { location_id: requireSelectedLocation(), source: selectedSource || settings?.review_source_mode, target_review_count: targetReviewCount, date_preset: datePreset === "all" ? undefined : datePreset }))}>
+                  <button type="button" className="primary-action" disabled={isActionRunning || !selectedLocationId} onClick={() => runAction("Run Fetch", () => postJson("/api/fetch-jobs", buildFetchPayload()))}>
                     <Zap aria-hidden="true" size={15} /> Jalankan Fetch
                   </button>
-                  <button type="button" disabled={isActionRunning || !selectedLocationId} onClick={() => runAction("Dry Run Fetch", () => postJson("/api/fetch-jobs", { location_id: requireSelectedLocation(), source: selectedSource || settings?.review_source_mode, target_review_count: targetReviewCount, dry_run: true, date_preset: datePreset === "all" ? undefined : datePreset }))}>
+                  <button type="button" disabled={isActionRunning || !selectedLocationId} onClick={() => runAction("Dry Run Fetch", () => postJson("/api/fetch-jobs", buildFetchPayload({ dryRun: true })))}>
                     <Play aria-hidden="true" size={15} /> Dry Run
                   </button>
                 </div>
@@ -340,14 +480,14 @@ export default function FetchJobsClient() {
                 <div className="batch-stat-grid">
                   <div><span>Sumber</span><strong>{selectedSource || settings?.review_source_mode || "mock"}</strong></div>
                   <div><span>Target</span><strong>{formatNumber(targetReviewCount)}</strong></div>
-                  <div><span>Rentang</span><strong>{datePreset === "all" ? "Semua" : datePreset.replaceAll("_", " ")}</strong></div>
+                  <div><span>Rentang</span><strong>{datePreset === "custom" ? "Tanggal spesifik" : datePreset === "all" ? "Semua" : datePreset.replaceAll("_", " ")}</strong></div>
                 </div>
               </div>
               <div className="button-row module-actions">
-                <button type="button" className="primary-action" disabled={isActionRunning || activeLocations.length === 0} onClick={() => runAction("Fetch All Active", () => postJson("/api/fetch-jobs/all-active", { dry_run: false, date_preset: datePreset === "all" ? undefined : datePreset }))}>
+                <button type="button" className="primary-action" disabled={isActionRunning || activeLocations.length === 0} onClick={() => runAction("Fetch All Active", () => postJson("/api/fetch-jobs/all-active", buildBatchPayload()))}>
                   Fetch Semua Aktif
                 </button>
-                <button type="button" disabled={isActionRunning || activeLocations.length === 0} onClick={() => runAction("Dry Run All Active", () => postJson("/api/fetch-jobs/all-active", { dry_run: true, date_preset: datePreset === "all" ? undefined : datePreset }))}>
+                <button type="button" disabled={isActionRunning || activeLocations.length === 0} onClick={() => runAction("Dry Run All Active", () => postJson("/api/fetch-jobs/all-active", buildBatchPayload({ dryRun: true })))}>
                   Dry Run Semua
                 </button>
               </div>
@@ -387,21 +527,68 @@ export default function FetchJobsClient() {
                         <option value={status} key={status}>{logStatusLabel(status)} ({formatNumber(count)})</option>
                       ))}
                     </select>
-                    <select value={logLocationFilter} onChange={(event) => setLogLocationFilter(Number(event.target.value) || "")}>
-                      <option value="">Semua lokasi</option>
-                      {locations.map((location) => <option value={location.id} key={location.id}>{location.branch_name}</option>)}
-                    </select>
-                    <select value={logSourceFilter} onChange={(event) => setLogSourceFilter(event.target.value)}>
-                      <option value="all">Semua sumber</option>
-                      {logSources.map((source) => <option value={source} key={source}>{source}</option>)}
-                    </select>
+                    <div className="location-combobox table-location-combobox">
+                      <input
+                        value={logLocationPickerQuery}
+                        onFocus={() => setIsLogLocationPickerOpen(true)}
+                        onChange={(event) => {
+                          setLogLocationPickerQuery(event.target.value);
+                          setLogLocationFilter("");
+                          setIsLogLocationPickerOpen(true);
+                        }}
+                        placeholder="Semua lokasi"
+                      />
+                      <button type="button" onClick={() => setIsLogLocationPickerOpen((current) => !current)}>
+                        <ChevronDown aria-hidden="true" size={17} />
+                      </button>
+                      {isLogLocationPickerOpen ? (
+                        <div className="location-combobox-menu">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLogLocationFilter("");
+                              setLogLocationPickerQuery("Semua lokasi");
+                              setIsLogLocationPickerOpen(false);
+                            }}
+                          >
+                            <strong>Semua lokasi</strong>
+                            <span>Tampilkan semua fetch log</span>
+                          </button>
+                          {logLocationOptions.slice(0, 10).map((location) => (
+                            <button
+                              type="button"
+                              key={location.id}
+                              onClick={() => {
+                                setLogLocationFilter(location.id);
+                                setLogLocationPickerQuery(location.branch_name);
+                                setIsLogLocationPickerOpen(false);
+                              }}
+                            >
+                              <strong>{location.branch_name}</strong>
+                              <span>{location.city ?? "Tanpa kota"} · {location.source}</span>
+                            </button>
+                          ))}
+                          {logLocationOptions.length === 0 ? <p>Tidak ada cabang yang cocok.</p> : null}
+                        </div>
+                      ) : null}
+                    </div>
                   </>
                 }
                 extendedFilterTitle="Extended Filters"
                 onResetFilters={() => {
                   setStatusTab("all");
                   setLogLocationFilter("");
+                  setLogLocationPickerQuery("Semua lokasi");
                   setLogSourceFilter("all");
+                  setLogDatePreset("all");
+                  setLogStartDate("");
+                  setLogEndDate("");
+                  setLogResultFilter("all");
+                  setLogFetchedFilter("all");
+                  setLogInsertedFilter("all");
+                  setLogDuplicateFilter("all");
+                  setLogErrorFilter("all");
+                  setLogSortFilter("newest");
                 }}
                 extendedFilters={
                   <>
@@ -410,20 +597,138 @@ export default function FetchJobsClient() {
                       <select value={statusTab} onChange={(event) => setStatusTab(event.target.value)}>
                         <option value="all">Semua status</option>
                         {logStatuses.map((status) => <option value={status} key={status}>{logStatusLabel(status)}</option>)}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Pilih lokasi</span>
-                      <select value={logLocationFilter} onChange={(event) => setLogLocationFilter(Number(event.target.value) || "")}>
-                        <option value="">Semua lokasi</option>
-                        {locations.map((location) => <option value={location.id} key={location.id}>{location.branch_name}</option>)}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Sumber review</span>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Pilih lokasi</span>
+                    <div className="location-combobox extended-combobox">
+                      <input
+                        value={logLocationPickerQuery}
+                        onFocus={() => setIsLogLocationPickerOpen(true)}
+                        onChange={(event) => {
+                          setLogLocationPickerQuery(event.target.value);
+                          setLogLocationFilter("");
+                          setIsLogLocationPickerOpen(true);
+                        }}
+                        placeholder="Cari lokasi..."
+                      />
+                      <button type="button" onClick={() => setIsLogLocationPickerOpen((current) => !current)}>
+                        <ChevronDown aria-hidden="true" size={17} />
+                      </button>
+                      {isLogLocationPickerOpen ? (
+                        <div className="location-combobox-menu">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLogLocationFilter("");
+                              setLogLocationPickerQuery("Semua lokasi");
+                              setIsLogLocationPickerOpen(false);
+                            }}
+                          >
+                            <strong>Semua lokasi</strong>
+                            <span>Tampilkan semua fetch log</span>
+                          </button>
+                          {logLocationOptions.slice(0, 10).map((location) => (
+                            <button
+                              type="button"
+                              key={location.id}
+                              onClick={() => {
+                                setLogLocationFilter(location.id);
+                                setLogLocationPickerQuery(location.branch_name);
+                                setIsLogLocationPickerOpen(false);
+                              }}
+                            >
+                              <strong>{location.branch_name}</strong>
+                              <span>{location.city ?? "Tanpa kota"} · {location.source}</span>
+                            </button>
+                          ))}
+                          {logLocationOptions.length === 0 ? <p>Tidak ada cabang yang cocok.</p> : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  </label>
+                  <label>
+                    <span>Sumber review</span>
                       <select value={logSourceFilter} onChange={(event) => setLogSourceFilter(event.target.value)}>
                         <option value="all">Semua sumber</option>
                         {logSources.map((source) => <option value={source} key={source}>{source}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Total fetched</span>
+                    <select value={logFetchedFilter} onChange={(event) => setLogFetchedFilter(event.target.value)}>
+                      <option value="all">Semua jumlah</option>
+                      <option value="zero">0 review</option>
+                      <option value="one_plus">Ada review</option>
+                      <option value="ten_plus">Minimal 10</option>
+                      <option value="fifty_plus">Minimal 50</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Total inserted</span>
+                    <select value={logInsertedFilter} onChange={(event) => setLogInsertedFilter(event.target.value)}>
+                      <option value="all">Semua jumlah</option>
+                      <option value="zero">Tidak ada review baru</option>
+                      <option value="one_plus">Ada review baru</option>
+                      <option value="ten_plus">Minimal 10</option>
+                      <option value="fifty_plus">Minimal 50</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Total duplicate</span>
+                    <select value={logDuplicateFilter} onChange={(event) => setLogDuplicateFilter(event.target.value)}>
+                      <option value="all">Semua duplicate</option>
+                      <option value="zero">Tanpa duplicate</option>
+                      <option value="one_plus">Ada duplicate</option>
+                      <option value="ten_plus">Minimal 10</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Error message</span>
+                    <select value={logErrorFilter} onChange={(event) => setLogErrorFilter(event.target.value)}>
+                      <option value="all">Semua log</option>
+                      <option value="with_error">Ada error</option>
+                      <option value="without_error">Tanpa error</option>
+                    </select>
+                  </label>
+                    <label>
+                      <span>Rentang tanggal log</span>
+                      <select value={logDatePreset} onChange={(event) => setLogDatePreset(event.target.value)}>
+                        <option value="all">Semua tanggal</option>
+                        <option value="today">Hari ini</option>
+                        <option value="last_7_days">7 hari terakhir</option>
+                        <option value="last_30_days">30 hari terakhir</option>
+                        <option value="custom">Tanggal spesifik</option>
+                      </select>
+                    </label>
+                    {logDatePreset === "custom" ? (
+                      <div className="extended-filter-date-row">
+                        <label>
+                          <span>Start date</span>
+                          <input type="date" value={logStartDate} onChange={(event) => setLogStartDate(event.target.value)} />
+                        </label>
+                        <label>
+                          <span>End date</span>
+                          <input type="date" value={logEndDate} onChange={(event) => setLogEndDate(event.target.value)} />
+                        </label>
+                      </div>
+                    ) : null}
+                    <label>
+                      <span>Hasil fetch</span>
+                      <select value={logResultFilter} onChange={(event) => setLogResultFilter(event.target.value)}>
+                        <option value="all">Semua hasil</option>
+                        <option value="with_inserted">Ada review baru</option>
+                        <option value="with_failed">Ada gagal/error</option>
+                        <option value="empty">Tidak ada perubahan</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>Urutkan berdasarkan</span>
+                      <select value={logSortFilter} onChange={(event) => setLogSortFilter(event.target.value)}>
+                        <option value="newest">Terbaru</option>
+                        <option value="oldest">Terlama</option>
+                        <option value="inserted_desc">Review baru terbanyak</option>
+                        <option value="failed_desc">Gagal terbanyak</option>
                       </select>
                     </label>
                   </>

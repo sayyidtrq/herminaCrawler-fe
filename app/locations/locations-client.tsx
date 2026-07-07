@@ -103,6 +103,13 @@ export default function LocationsClient() {
   const [sourceFilter, setSourceFilter] = useState(searchParams.get("source") ?? "all");
   const [locationIdFilter, setLocationIdFilter] = useState<number | "">(Number(searchParams.get("location_id")) || "");
   const [mapStatusFilter, setMapStatusFilter] = useState<CoordinateStatus | "all">("all");
+  const [cityFilter, setCityFilter] = useState("all");
+  const [riskFilter, setRiskFilter] = useState<BranchScore["risk"] | "all">("all");
+  const [targetFilter, setTargetFilter] = useState("all");
+  const [placeIdFilter, setPlaceIdFilter] = useState("all");
+  const [linkFilter, setLinkFilter] = useState("all");
+  const [updatedFilter, setUpdatedFilter] = useState("all");
+  const [sortFilter, setSortFilter] = useState("name");
 
   const loadData = useCallback(async (options?: { silent?: boolean }) => {
     if (!options?.silent) setIsLoading(true);
@@ -216,18 +223,9 @@ export default function LocationsClient() {
     return Array.from(new Set(locations.map((location) => location.source))).sort();
   }, [locations]);
 
-  const filteredLocations = useMemo(() => {
-    return locations.filter((location) => {
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && location.is_active) ||
-        (statusFilter === "inactive" && !location.is_active);
-      const matchesSource = sourceFilter === "all" || location.source === sourceFilter;
-      const matchesLocation = !locationIdFilter || location.id === locationIdFilter;
-      const matchesMapStatus = mapStatusFilter === "all" || coordinateStatus(location) === mapStatusFilter;
-      return matchesStatus && matchesSource && matchesLocation && matchesMapStatus;
-    });
-  }, [locationIdFilter, locations, mapStatusFilter, sourceFilter, statusFilter]);
+  const locationCities = useMemo(() => {
+    return Array.from(new Set(locations.map((location) => location.city).filter(Boolean) as string[])).sort();
+  }, [locations]);
 
   const scores = useMemo<Record<number, BranchScore>>(() => {
     return Object.fromEntries(
@@ -250,6 +248,59 @@ export default function LocationsClient() {
       }),
     );
   }, [locations, reviews]);
+
+  const filteredLocations = useMemo(() => {
+    const targetMatches = (target: number) => {
+      if (targetFilter === "under_50") return target < 50;
+      if (targetFilter === "50_100") return target >= 50 && target <= 100;
+      if (targetFilter === "over_100") return target > 100;
+      return true;
+    };
+    const presenceMatches = (value: string | null | undefined, filter: string) => {
+      if (filter === "filled") return Boolean(value?.trim());
+      if (filter === "missing") return !value?.trim();
+      return true;
+    };
+    const linkMatches = (location: Location) => {
+      if (linkFilter === "complete") return Boolean(location.google_maps_url?.trim()) && Boolean(location.google_reviews_url?.trim());
+      if (linkFilter === "maps_missing") return !location.google_maps_url?.trim();
+      if (linkFilter === "reviews_missing") return !location.google_reviews_url?.trim();
+      return true;
+    };
+    const updatedMatches = (location: Location) => {
+      const rawDate = location.updated_at ?? location.created_at;
+      if (updatedFilter === "missing") return !rawDate;
+      if (updatedFilter === "all") return true;
+      if (!rawDate) return false;
+      const timestamp = new Date(rawDate).getTime();
+      if (!timestamp) return false;
+      const days = updatedFilter === "last_7_days" ? 7 : 30;
+      return timestamp >= Date.now() - days * 24 * 60 * 60 * 1000;
+    };
+
+    return locations.filter((location) => {
+      const score = scores[location.id];
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && location.is_active) ||
+        (statusFilter === "inactive" && !location.is_active);
+      const matchesSource = sourceFilter === "all" || location.source === sourceFilter;
+      const matchesLocation = !locationIdFilter || location.id === locationIdFilter;
+      const matchesMapStatus = mapStatusFilter === "all" || coordinateStatus(location) === mapStatusFilter;
+      const matchesCity = cityFilter === "all" || location.city === cityFilter;
+      const matchesRisk = riskFilter === "all" || score?.risk === riskFilter;
+      const matchesTarget = targetMatches(location.target_review_count);
+      const matchesPlaceId = presenceMatches(location.external_place_id, placeIdFilter);
+      return matchesStatus && matchesSource && matchesLocation && matchesMapStatus && matchesCity && matchesRisk && matchesTarget && matchesPlaceId && linkMatches(location) && updatedMatches(location);
+    }).sort((a, b) => {
+      if (sortFilter === "reviews_desc") return (scores[b.id]?.reviews ?? 0) - (scores[a.id]?.reviews ?? 0);
+      if (sortFilter === "target_desc") return b.target_review_count - a.target_review_count;
+      if (sortFilter === "updated_desc") return new Date(b.updated_at ?? b.created_at ?? 0).getTime() - new Date(a.updated_at ?? a.created_at ?? 0).getTime();
+      if (sortFilter === "created_desc") return new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime();
+      if (sortFilter === "city") return (a.city ?? "").localeCompare(b.city ?? "");
+      return a.branch_name.localeCompare(b.branch_name);
+    });
+  }, [cityFilter, linkFilter, locationIdFilter, locations, mapStatusFilter, placeIdFilter, riskFilter, scores, sortFilter, sourceFilter, statusFilter, targetFilter, updatedFilter]);
 
   const activeLocations = locations.filter((location) => location.is_active).length;
   const missingCoordinates = locations.filter((location) => coordinateStatus(location) !== "valid").length;
@@ -510,25 +561,10 @@ export default function LocationsClient() {
               ].filter(Boolean).join(" ")}
               filters={
                 <>
-                  <select value={locationIdFilter} onChange={(event) => setLocationIdFilter(Number(event.target.value) || "")}>
-                    <option value="">Semua cabang</option>
-                    {locations.map((location) => <option value={location.id} key={location.id}>{location.branch_name}</option>)}
-                  </select>
                   <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                     <option value="all">Semua status</option>
                     <option value="active">Aktif</option>
                     <option value="inactive">Nonaktif</option>
-                  </select>
-                  <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
-                    <option value="all">Semua sumber</option>
-                    {locationSources.map((source) => <option value={source} key={source}>{source}</option>)}
-                  </select>
-                  <select value={mapStatusFilter} onChange={(event) => setMapStatusFilter(event.target.value as CoordinateStatus | "all")}>
-                    <option value="all">Semua peta</option>
-                    <option value="valid">Koordinat valid</option>
-                    <option value="missing">Koordinat kosong</option>
-                    <option value="invalid">Koordinat tidak valid</option>
-                    <option value="outside">Di luar Indonesia</option>
                   </select>
                 </>
               }
@@ -538,14 +574,28 @@ export default function LocationsClient() {
                 setStatusFilter("all");
                 setSourceFilter("all");
                 setMapStatusFilter("all");
+                setCityFilter("all");
+                setRiskFilter("all");
+                setTargetFilter("all");
+                setPlaceIdFilter("all");
+                setLinkFilter("all");
+                setUpdatedFilter("all");
+                setSortFilter("name");
               }}
               extendedFilters={
                 <>
                   <label>
-                    <span>Pilih cabang</span>
+                    <span>Pilih cabang spesifik</span>
                     <select value={locationIdFilter} onChange={(event) => setLocationIdFilter(Number(event.target.value) || "")}>
                       <option value="">Semua cabang</option>
                       {locations.map((location) => <option value={location.id} key={location.id}>{location.branch_name}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Kota</span>
+                    <select value={cityFilter} onChange={(event) => setCityFilter(event.target.value)}>
+                      <option value="all">Semua kota</option>
+                      {locationCities.map((city) => <option value={city} key={city}>{city}</option>)}
                     </select>
                   </label>
                   <label>
@@ -557,20 +607,75 @@ export default function LocationsClient() {
                     </select>
                   </label>
                   <label>
-                    <span>Sumber review</span>
+                    <span>Sumber review / scraper</span>
                     <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
                       <option value="all">Semua sumber</option>
                       {locationSources.map((source) => <option value={source} key={source}>{source}</option>)}
                     </select>
                   </label>
                   <label>
-                    <span>Status peta</span>
+                    <span>Kelengkapan koordinat</span>
                     <select value={mapStatusFilter} onChange={(event) => setMapStatusFilter(event.target.value as CoordinateStatus | "all")}>
-                      <option value="all">Semua peta</option>
+                      <option value="all">Semua koordinat</option>
                       <option value="valid">Koordinat valid</option>
                       <option value="missing">Koordinat kosong</option>
                       <option value="invalid">Koordinat tidak valid</option>
                       <option value="outside">Di luar Indonesia</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>External Place ID</span>
+                    <select value={placeIdFilter} onChange={(event) => setPlaceIdFilter(event.target.value)}>
+                      <option value="all">Semua Place ID</option>
+                      <option value="filled">Sudah terisi</option>
+                      <option value="missing">Kosong</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Link Google</span>
+                    <select value={linkFilter} onChange={(event) => setLinkFilter(event.target.value)}>
+                      <option value="all">Semua link</option>
+                      <option value="complete">Maps & review lengkap</option>
+                      <option value="maps_missing">Maps URL kosong</option>
+                      <option value="reviews_missing">Reviews URL kosong</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Risk cabang</span>
+                    <select value={riskFilter} onChange={(event) => setRiskFilter(event.target.value as BranchScore["risk"] | "all")}>
+                      <option value="all">Semua risk</option>
+                      <option value="Critical">Kritis</option>
+                      <option value="Watch">Perlu dipantau</option>
+                      <option value="Stable">Stabil</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Target review</span>
+                    <select value={targetFilter} onChange={(event) => setTargetFilter(event.target.value)}>
+                      <option value="all">Semua target</option>
+                      <option value="under_50">Di bawah 50</option>
+                      <option value="50_100">50 - 100</option>
+                      <option value="over_100">Di atas 100</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Update data</span>
+                    <select value={updatedFilter} onChange={(event) => setUpdatedFilter(event.target.value)}>
+                      <option value="all">Semua waktu</option>
+                      <option value="last_7_days">7 hari terakhir</option>
+                      <option value="last_30_days">30 hari terakhir</option>
+                      <option value="missing">Tanggal kosong</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Urutkan berdasarkan</span>
+                    <select value={sortFilter} onChange={(event) => setSortFilter(event.target.value)}>
+                      <option value="name">Nama cabang</option>
+                      <option value="reviews_desc">Total review terbanyak</option>
+                      <option value="target_desc">Target review terbesar</option>
+                      <option value="updated_desc">Update terbaru</option>
+                      <option value="created_desc">Data terbaru dibuat</option>
+                      <option value="city">Kota</option>
                     </select>
                   </label>
                 </>
