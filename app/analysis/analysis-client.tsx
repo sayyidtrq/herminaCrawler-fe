@@ -181,23 +181,71 @@ export default function AnalysisClient() {
     return filtered;
   }, [reviews, searchKeyword, filterLocationId, filterSentiment, filterSortOrder, filterUrgency, filterRating, filterStartDate, filterEndDate, filterIssueCategory, filterPatientSafety]);
 
+  const sentimentCounts = useMemo(() => {
+    return analyzedReviews.reduce<Record<string, number>>((acc, review) => {
+      const key = review.sentiment ?? "unknown";
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+  }, [analyzedReviews]);
+
   return (
     <AppShell>
-      <PageHeader
-        eyebrow="Analysis"
-        title="AI analysis operations"
-        helper="Jalankan pending analysis, rerun per location, dan monitor coverage analisis."
-        action={
+      <header className="page-header dashboard-hero-header">
+        <div>
+          <p className="kicker">Analysis</p>
+          <h1>AI Analysis Operations</h1>
+        </div>
+        <div className="dashboard-header-actions">
           <button type="button" className="ghost-action" onClick={() => void loadData()} disabled={isLoading || isActionRunning}>
             <RefreshCcw aria-hidden="true" size={15} /> Refresh
           </button>
-        }
-      />
+        </div>
+      </header>
 
       {error ? <BackendWarning error={error} /> : null}
       <ActionMessagePanel message={actionMessage} />
 
-      <section className="grid grid-cols-1 xl:grid-cols-12 gap-6 mt-6">
+      <section className="locations-page-stack">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="bg-[#172e25] text-white rounded-2xl p-4 flex flex-col justify-between shadow-sm border border-[#2c5340]">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-emerald-400/80 mb-2">Total Review</span>
+            <div>
+              <strong className="text-2xl font-bold block">{formatNumber(overview?.total_reviews ?? 0)}</strong>
+              <span className="text-[10px] text-emerald-400/60">Semua review masuk</span>
+            </div>
+          </div>
+          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-2">Positif</span>
+            <div>
+              <strong className="text-2xl font-bold block text-emerald-800">{formatNumber(sentimentCounts.positive ?? 0)}</strong>
+              <span className="text-[10px] text-emerald-600/70">Dari halaman ini</span>
+            </div>
+          </div>
+          <div className="bg-sky-50 border border-sky-100 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-sky-600 mb-2">Netral</span>
+            <div>
+              <strong className="text-2xl font-bold block text-sky-800">{formatNumber(sentimentCounts.neutral ?? 0)}</strong>
+              <span className="text-[10px] text-sky-600/70">Dari halaman ini</span>
+            </div>
+          </div>
+          <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-red-600 mb-2">Negatif</span>
+            <div>
+              <strong className="text-2xl font-bold block text-red-800">{formatNumber(sentimentCounts.negative ?? 0)}</strong>
+              <span className="text-[10px] text-red-600/70">Dari halaman ini</span>
+            </div>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-2">Total Lokasi</span>
+            <div>
+              <strong className="text-2xl font-bold block text-slate-800">{locations.length}</strong>
+              <span className="text-[10px] text-slate-500">Cabang aktif</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         
         {/* LEFT COLUMN: Main Analyzed List */}
         <article className="xl:col-span-8 flex flex-col gap-6">
@@ -469,6 +517,7 @@ export default function AnalysisClient() {
           </div>
           
         </aside>
+      </div>
       </section>
 
       {/* Filter Sidebar Drawer */}

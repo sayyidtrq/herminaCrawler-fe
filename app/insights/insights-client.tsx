@@ -28,9 +28,10 @@ export default function InsightsClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [criticalPage, setCriticalPage] = useState(1);
   const [negativePage, setNegativePage] = useState(1);
-  const itemsPerPage = 3;
-
+  const criticalItemsPerPage = 3;
+  const negativeItemsPerPage = 5;
   const [searchKeyword, setSearchKeyword] = useState("");
   const [filterLocationId, setFilterLocationId] = useState<number | "">("");
   const [filterSentiment, setFilterSentiment] = useState("all");
@@ -185,6 +186,14 @@ export default function InsightsClient() {
     return filtered;
   }, [recommendationReviews, searchKeyword, filterLocationId, filterSentiment, filterSortOrder, filterUrgency, filterRating, filterStartDate, filterEndDate, filterIssueCategory, filterPatientSafety]);
 
+  const sentimentCounts = useMemo(() => {
+    return filteredActionQueue.reduce<Record<string, number>>((acc, review) => {
+      const key = review.sentiment ?? "unknown";
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+  }, [filteredActionQueue]);
+
   const actionQueueColumns: Array<DataTableColumn<Review>> = [
     {
       id: "review",
@@ -233,33 +242,71 @@ export default function InsightsClient() {
 
   return (
     <AppShell>
-      <PageHeader
-        eyebrow="Insights"
-        title="Operational intelligence"
-        helper="Insight ringkas untuk patient safety, reputasi, issue dominan, dan rekomendasi tindakan."
-        action={
+      <header className="page-header dashboard-hero-header">
+        <div>
+          <p className="kicker">Insights</p>
+          <h1>Operational Intelligence</h1>
+        </div>
+        <div className="dashboard-header-actions">
           <button type="button" className="ghost-action" onClick={() => void loadData()} disabled={isLoading}>
             <RefreshCcw aria-hidden="true" size={15} /> Refresh
           </button>
-        }
-      />
+        </div>
+      </header>
 
       {error ? <BackendWarning error={error} /> : null}
 
-      <section className="flex flex-col gap-6 mt-6">
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-          
-          <div className="xl:col-span-5 flex flex-col gap-6">
-            <article className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
+      <section className="locations-page-stack">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="bg-[#172e25] text-white rounded-2xl p-4 flex flex-col justify-between shadow-sm border border-[#2c5340]">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-emerald-400/80 mb-2">Total Review</span>
+            <div>
+              <strong className="text-2xl font-bold block">{formatNumber(overview?.total_reviews ?? 0)}</strong>
+              <span className="text-[10px] text-emerald-400/60">Semua review masuk</span>
+            </div>
+          </div>
+          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-2">Positif</span>
+            <div>
+              <strong className="text-2xl font-bold block text-emerald-800">{formatNumber(sentimentCounts.positive ?? 0)}</strong>
+              <span className="text-[10px] text-emerald-600/70">Dari halaman ini</span>
+            </div>
+          </div>
+          <div className="bg-sky-50 border border-sky-100 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-sky-600 mb-2">Netral</span>
+            <div>
+              <strong className="text-2xl font-bold block text-sky-800">{formatNumber(sentimentCounts.neutral ?? 0)}</strong>
+              <span className="text-[10px] text-sky-600/70">Dari halaman ini</span>
+            </div>
+          </div>
+          <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-red-600 mb-2">Negatif</span>
+            <div>
+              <strong className="text-2xl font-bold block text-red-800">{formatNumber(sentimentCounts.negative ?? 0)}</strong>
+              <span className="text-[10px] text-red-600/70">Dari halaman ini</span>
+            </div>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-2">Total Lokasi</span>
+            <div>
+              <strong className="text-2xl font-bold block text-slate-800">{locations.length}</strong>
+              <span className="text-[10px] text-slate-500">Cabang aktif</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 mb-6">
+          <div className="xl:col-span-5">
+            <article className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col h-full">
               <div className="relative z-10">
                 <SectionHeader kicker="Risk Signal" title={`${riskScore}% reputation risk`} helper="Heuristic dari critical signals + negative sentiment." />
                 <div className="flex justify-center my-6">
-                   <div className="relative w-32 h-32 flex flex-col items-center justify-center rounded-full border-[12px] border-slate-50 shadow-inner">
+                   <div className="relative w-44 h-44 flex flex-col items-center justify-center rounded-full border-[12px] border-slate-50 shadow-inner">
                      <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                        <circle cx="50" cy="50" r="44" fill="none" stroke="#ef4444" strokeWidth="12" strokeDasharray={`${riskScore * 2.76} 276`} className="transition-all duration-1000 ease-out" />
                      </svg>
-                     <strong className="text-3xl font-black text-slate-800">{riskScore}%</strong>
-                     <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">risk</span>
+                     <strong className="text-4xl font-black text-slate-800">{riskScore}%</strong>
+                     <span className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">risk</span>
                    </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 mt-auto">
@@ -287,29 +334,10 @@ export default function InsightsClient() {
                 </div>
               </div>
             </article>
-
-            <article className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex-1">
-              <SectionHeader kicker="Critical Alerts" title="Patient safety / viral risk" helper="Prioritas tertinggi untuk follow-up." />
-              {criticalReviews.length === 0 ? <EmptyState title="Tidak ada critical issue" detail="Tidak ada critical signal dari backend saat ini." /> : null}
-              <div className="flex flex-col gap-4 mt-4">
-                {criticalReviews.slice(0, 8).map((review, index) => (
-                  <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-4 flex justify-between items-start" key={`${review.location}-${index}`}>
-                    <div className="flex flex-col gap-1.5 items-start">
-                      <strong className="text-sm font-extrabold text-slate-800">{review.location}</strong>
-                      <p className="text-sm font-medium text-slate-600 leading-relaxed">{review.review_text || <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">{issueLabel(review.issue_category)}</span>}</p>
-                      <div className="mt-2">
-                        <Badge tone={toneForUrgency(review.urgency)}>{urgencyLabel(review.urgency)}</Badge>
-                      </div>
-                    </div>
-                    <AlertTriangle className="text-red-500 shrink-0 mt-1" size={18} />
-                  </div>
-                ))}
-              </div>
-            </article>
           </div>
 
-          <div className="xl:col-span-7 flex flex-col gap-6">
-            <article className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <div className="xl:col-span-7">
+            <article className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm h-full flex flex-col">
               <SectionHeader kicker="Top Issues" title="Issue paling sering muncul" helper="Dari summary backend." />
               {isLoading ? <EmptyState title="Loading insights" detail="Mengambil summary dari backend..." /> : null}
               {!isLoading && topIssues.length === 0 ? <EmptyState title="Belum ada issue" detail="Jalankan analysis untuk mengisi issue category." /> : null}
@@ -325,12 +353,64 @@ export default function InsightsClient() {
                 ))}
               </div>
             </article>
+          </div>
+        </div>
 
-            <article className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex-1 flex flex-col">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          <div className="xl:col-span-5">
+            <article className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm h-full flex flex-col">
+              <SectionHeader kicker="Critical Alerts" title="Patient safety / viral risk" helper="Prioritas tertinggi untuk follow-up." />
+              {criticalReviews.length === 0 ? <EmptyState title="Tidak ada critical issue" detail="Tidak ada critical signal dari backend saat ini." /> : null}
+              <div className="flex flex-col gap-4 mt-4 flex-1">
+                {criticalReviews.slice((criticalPage - 1) * criticalItemsPerPage, criticalPage * criticalItemsPerPage).map((review, index) => (
+                  <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-4 flex justify-between items-start" key={`${review.location}-${index}`}>
+                    <div className="flex flex-col gap-1.5 items-start">
+                      <strong className="text-sm font-extrabold text-slate-800">{review.location}</strong>
+                      <p className="text-sm font-medium text-slate-600 leading-relaxed">{review.review_text || <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">{issueLabel(review.issue_category)}</span>}</p>
+                      <div className="mt-2">
+                        <Badge tone={toneForUrgency(review.urgency)}>{urgencyLabel(review.urgency)}</Badge>
+                      </div>
+                    </div>
+                    <AlertTriangle className="text-red-500 shrink-0 mt-1" size={18} />
+                  </div>
+                ))}
+              </div>
+              
+              {criticalReviews.length > criticalItemsPerPage && (
+                <div className="flex items-center justify-between mt-auto pt-6 border-t border-slate-100">
+                  <span className="text-xs font-bold text-slate-500">
+                    Menampilkan {(criticalPage - 1) * criticalItemsPerPage + 1}-{Math.min(criticalPage * criticalItemsPerPage, criticalReviews.length)} dari {criticalReviews.length}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCriticalPage(p => Math.max(1, p - 1))}
+                      disabled={criticalPage === 1}
+                      className="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-white"
+                    >
+                      <ChevronLeft className="inline-block w-3 h-3 mr-1" /> Sebelumnya
+                    </button>
+                    <span className="text-xs font-bold text-slate-800">
+                      Halaman {criticalPage} / {Math.ceil(criticalReviews.length / criticalItemsPerPage)}
+                    </span>
+                    <button
+                      onClick={() => setCriticalPage(p => Math.min(Math.ceil(criticalReviews.length / criticalItemsPerPage), p + 1))}
+                      disabled={criticalPage === Math.ceil(criticalReviews.length / criticalItemsPerPage)}
+                      className="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-white"
+                    >
+                      Berikutnya <ChevronRight className="inline-block w-3 h-3 ml-1" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </article>
+          </div>
+
+          <div className="xl:col-span-7">
+            <article className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm h-full flex flex-col">
               <SectionHeader kicker="Negative Reviews" title="Reputation watchlist" helper="Review negatif terbaru dari backend." />
               {negativeReviews.length === 0 ? <EmptyState title="Tidak ada negative review" detail="Tidak ada data negative review dari backend saat ini." /> : null}
               <div className="flex flex-col gap-4 mt-4 flex-1">
-                {negativeReviews.slice((negativePage - 1) * itemsPerPage, negativePage * itemsPerPage).map((review, index) => (
+                {negativeReviews.slice((negativePage - 1) * negativeItemsPerPage, negativePage * negativeItemsPerPage).map((review, index) => (
                   <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col" key={`${review.location}-${index}`}>
                      <div className="flex justify-between items-start mb-2">
                        <strong className="text-sm font-extrabold text-slate-800">{review.location}</strong>
@@ -341,10 +421,10 @@ export default function InsightsClient() {
                 ))}
               </div>
               
-              {negativeReviews.length > itemsPerPage && (
-                <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
+              {negativeReviews.length > negativeItemsPerPage && (
+                <div className="flex items-center justify-between mt-auto pt-6 border-t border-slate-100">
                   <span className="text-xs font-bold text-slate-500">
-                    Menampilkan {(negativePage - 1) * itemsPerPage + 1}-{Math.min(negativePage * itemsPerPage, negativeReviews.length)} dari {negativeReviews.length}
+                    Menampilkan {(negativePage - 1) * negativeItemsPerPage + 1}-{Math.min(negativePage * negativeItemsPerPage, negativeReviews.length)} dari {negativeReviews.length}
                   </span>
                   <div className="flex items-center gap-2">
                     <button
@@ -355,11 +435,11 @@ export default function InsightsClient() {
                       <ChevronLeft className="inline-block w-3 h-3 mr-1" /> Sebelumnya
                     </button>
                     <span className="text-xs font-bold text-slate-800">
-                      Halaman {negativePage} / {Math.ceil(negativeReviews.length / itemsPerPage)}
+                      Halaman {negativePage} / {Math.ceil(negativeReviews.length / negativeItemsPerPage)}
                     </span>
                     <button
-                      onClick={() => setNegativePage(p => Math.min(Math.ceil(negativeReviews.length / itemsPerPage), p + 1))}
-                      disabled={negativePage === Math.ceil(negativeReviews.length / itemsPerPage)}
+                      onClick={() => setNegativePage(p => Math.min(Math.ceil(negativeReviews.length / negativeItemsPerPage), p + 1))}
+                      disabled={negativePage === Math.ceil(negativeReviews.length / negativeItemsPerPage)}
                       className="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-white"
                     >
                       Berikutnya <ChevronRight className="inline-block w-3 h-3 ml-1" />
