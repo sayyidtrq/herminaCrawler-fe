@@ -492,7 +492,6 @@ export default function LocationsClient() {
               title="Registry cabang"
             />
             <DataTable
-              title="Data cabang"
               data={filteredLocations}
               columns={locationColumns}
               getRowKey={(location) => location.id}
@@ -531,6 +530,49 @@ export default function LocationsClient() {
                     <option value="invalid">Koordinat tidak valid</option>
                     <option value="outside">Di luar Indonesia</option>
                   </select>
+                </>
+              }
+              extendedFilterTitle="Extended Filters"
+              onResetFilters={() => {
+                setLocationIdFilter("");
+                setStatusFilter("all");
+                setSourceFilter("all");
+                setMapStatusFilter("all");
+              }}
+              extendedFilters={
+                <>
+                  <label>
+                    <span>Pilih cabang</span>
+                    <select value={locationIdFilter} onChange={(event) => setLocationIdFilter(Number(event.target.value) || "")}>
+                      <option value="">Semua cabang</option>
+                      {locations.map((location) => <option value={location.id} key={location.id}>{location.branch_name}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Status cabang</span>
+                    <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                      <option value="all">Semua status</option>
+                      <option value="active">Aktif</option>
+                      <option value="inactive">Nonaktif</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Sumber review</span>
+                    <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
+                      <option value="all">Semua sumber</option>
+                      {locationSources.map((source) => <option value={source} key={source}>{source}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Status peta</span>
+                    <select value={mapStatusFilter} onChange={(event) => setMapStatusFilter(event.target.value as CoordinateStatus | "all")}>
+                      <option value="all">Semua peta</option>
+                      <option value="valid">Koordinat valid</option>
+                      <option value="missing">Koordinat kosong</option>
+                      <option value="invalid">Koordinat tidak valid</option>
+                      <option value="outside">Di luar Indonesia</option>
+                    </select>
+                  </label>
                 </>
               }
             />

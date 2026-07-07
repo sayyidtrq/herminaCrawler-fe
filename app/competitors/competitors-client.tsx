@@ -420,7 +420,6 @@ export default function CompetitorsClient() {
               title="Registry kompetitor"
             />
             <DataTable
-              title="Data Kompetitor"
               data={filteredCompetitors}
               columns={competitorColumns}
               getRowKey={(comp) => comp.id}
@@ -454,6 +453,41 @@ export default function CompetitorsClient() {
                     <option value="invalid">Koordinat tidak valid</option>
                     <option value="outside">Di luar Indonesia</option>
                   </select>
+                </>
+              }
+              extendedFilterTitle="Extended Filters"
+              onResetFilters={() => {
+                setStatusFilter("all");
+                setSourceFilter("all");
+                setMapStatusFilter("all");
+              }}
+              extendedFilters={
+                <>
+                  <label>
+                    <span>Status kompetitor</span>
+                    <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                      <option value="all">Semua status</option>
+                      <option value="active">Aktif</option>
+                      <option value="inactive">Nonaktif</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Sumber review</span>
+                    <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
+                      <option value="all">Semua sumber</option>
+                      {competitorSources.map((source) => <option value={source} key={source}>{source}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Status peta</span>
+                    <select value={mapStatusFilter} onChange={(event) => setMapStatusFilter(event.target.value as CoordinateStatus | "all")}>
+                      <option value="all">Semua peta</option>
+                      <option value="valid">Koordinat valid</option>
+                      <option value="missing">Koordinat kosong</option>
+                      <option value="invalid">Koordinat tidak valid</option>
+                      <option value="outside">Di luar Indonesia</option>
+                    </select>
+                  </label>
                 </>
               }
             />

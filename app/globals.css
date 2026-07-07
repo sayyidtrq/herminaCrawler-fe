@@ -3824,6 +3824,17 @@ button:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity:
   background:
     linear-gradient(180deg, rgba(248,250,252,.98), rgba(255,255,255,.9)) !important;
 }
+
+.data-table-shell-filter-only .data-table-toolbar {
+  grid-template-columns: 1fr !important;
+  padding: 10px 12px !important;
+  background: rgba(248,250,252,.82) !important;
+}
+
+.data-table-shell-filter-only .data-table-controls {
+  grid-column: 1 !important;
+}
+
 .data-table-titleblock {
   display: grid !important;
   gap: 4px !important;
@@ -3851,8 +3862,24 @@ button:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity:
   gap: 10px !important;
   min-width: 0 !important;
 }
-.data-table-search {
+
+.data-table-shell-filter-only .data-table-controls {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  width: 100% !important;
   min-width: 0 !important;
+  overflow-x: auto !important;
+  padding-bottom: 2px !important;
+  scrollbar-width: thin !important;
+}
+
+.data-table-search {
+  flex: 0 1 320px !important;
+  min-width: 220px !important;
+  max-width: 360px !important;
   min-height: 40px !important;
   display: flex !important;
   align-items: center !important;
@@ -3877,6 +3904,7 @@ button:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity:
   color: var(--ink) !important;
   padding: 0 !important;
   font-size: 13px !important;
+  font-weight: 400 !important;
 }
 .data-table-search input::placeholder { color: #94a3b8 !important; }
 .data-table-filters {
@@ -3885,16 +3913,233 @@ button:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity:
   justify-content: flex-end !important;
   gap: 8px !important;
 }
+
+.data-table-shell-filter-only .data-table-filters {
+  flex: 0 1 auto !important;
+  flex-wrap: nowrap !important;
+  justify-content: flex-end !important;
+  min-width: 0 !important;
+}
+
 .data-table-filters select {
+  flex: 0 1 auto !important;
+  width: clamp(150px, 12vw, 210px) !important;
+  max-width: 220px !important;
   min-height: 40px !important;
   border: 1px solid rgba(203,213,225,.95) !important;
   border-radius: 12px !important;
   background: #fff !important;
   color: var(--ink-soft) !important;
   padding: 0 34px 0 11px !important;
-  font-size: 12px !important;
-  font-weight: 850 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
 }
+
+.extended-filter-trigger {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(203,213,225,.95);
+  border-radius: 10px;
+  background: #fff;
+  color: #334155;
+  padding: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.extended-filter-trigger:hover {
+  border-color: rgba(16,185,129,.5);
+  color: #047857;
+  background: #f8fafc;
+}
+
+.extended-filter-trigger svg {
+  flex: 0 0 auto;
+  color: #059669;
+}
+
+.data-table-reset {
+  flex: 0 0 auto;
+  height: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(203,213,225,.95);
+  border-radius: 10px;
+  background: #fff;
+  color: #64748b;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+}
+
+.data-table-reset:hover {
+  border-color: rgba(225,29,72,.22);
+  background: rgba(255,241,242,.72);
+  color: #be123c;
+}
+
+.data-table-reset svg {
+  flex: 0 0 auto;
+}
+
+.data-table-reset:hover svg {
+  color: #be123c;
+}
+
+.extended-filter-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(15,23,42,.32);
+  backdrop-filter: blur(5px);
+}
+
+.extended-filter-panel {
+  width: min(540px, 100vw);
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: rgba(255,255,255,.98);
+  box-shadow: -22px 0 60px rgba(15,23,42,.16);
+}
+
+.extended-filter-header {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--line);
+  padding: 20px 24px;
+}
+
+.extended-filter-header div {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink);
+}
+
+.extended-filter-header svg {
+  color: #059669;
+}
+
+.extended-filter-header strong {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.extended-filter-header button {
+  width: 36px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.extended-filter-body {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  overflow: auto;
+  padding: 22px;
+}
+
+.extended-filter-body label {
+  display: grid;
+  gap: 8px;
+}
+
+.extended-filter-body label > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.extended-filter-body select,
+.extended-filter-search {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(203,213,225,.95);
+  border-radius: 12px;
+  background: rgba(248,250,252,.86);
+  color: var(--ink-soft);
+  padding: 0 12px;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.extended-filter-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+}
+
+.extended-filter-search input {
+  width: 100%;
+  height: 42px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+
+.extended-filter-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  background: rgba(248,250,252,.92);
+  padding: 18px 22px;
+}
+
+.extended-filter-footer button {
+  min-height: 46px;
+  border: 1px solid rgba(203,213,225,.95);
+  border-radius: 13px;
+  background: #fff;
+  color: var(--ink-soft);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.extended-filter-footer button:not(.primary):hover {
+  border-color: rgba(225,29,72,.24);
+  background: rgba(255,241,242,.82);
+  color: #be123c;
+}
+
+.extended-filter-footer button.primary {
+  border-color: #059669;
+  background: #059669;
+  color: white;
+}
+
+.extended-filter-footer button.primary:hover {
+  border-color: #047857;
+  background: #047857;
+}
+
 .data-table-scroll {
   width: 100% !important;
   overflow-x: auto !important;
@@ -4055,9 +4300,15 @@ button:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity:
 }
 
 .location-registry-panel .data-table-toolbar {
-  grid-template-columns: minmax(260px, .48fr) minmax(0, 1.52fr) !important;
-  align-items: start !important;
-  gap: 12px !important;
+  grid-template-columns: 1fr !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.location-registry-panel .data-table-titleblock {
+  align-self: center !important;
+  justify-items: center !important;
+  text-align: center !important;
 }
 
 .location-registry-panel .data-table-controls {
@@ -4065,32 +4316,38 @@ button:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity:
   flex-wrap: nowrap !important;
   justify-content: flex-end !important;
   align-items: center !important;
-  gap: 8px !important;
+  gap: 10px !important;
   min-width: 0 !important;
+  overflow-x: auto !important;
+}
+
+.location-registry-panel .extended-filter-trigger {
+  flex: 0 0 auto !important;
 }
 
 .location-registry-panel .data-table-search {
-  flex: 0 1 300px !important;
+  flex: 0 1 320px !important;
   min-width: 220px !important;
-  max-width: 330px !important;
+  max-width: 360px !important;
 }
 
 .location-registry-panel .data-table-filters {
   display: flex !important;
-  flex: 0 0 auto !important;
+  flex: 0 1 auto !important;
   flex-wrap: nowrap !important;
   justify-content: flex-end !important;
-  gap: 8px !important;
+  gap: 10px !important;
+  min-width: 0 !important;
 }
 
 .location-registry-panel .data-table-filters select {
-  width: 150px !important;
+  width: clamp(150px, 10vw, 190px) !important;
   min-width: 0 !important;
   padding-right: 28px !important;
 }
 
 .location-registry-panel .data-table-filters select:first-child {
-  width: 160px !important;
+  width: clamp(160px, 11vw, 200px) !important;
 }
 
 .location-registry-panel .data-table {

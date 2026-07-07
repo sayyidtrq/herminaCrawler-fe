@@ -369,25 +369,7 @@ export default function FetchJobsClient() {
                 title="Riwayat Fetch"
               />
 
-              <div className="dashboard-view-tabs" role="tablist" aria-label="Filter status fetch log">
-                <button type="button" className={statusTab === "all" ? "active" : ""} onClick={() => setStatusTab("all")}>
-                  Semua ({formatNumber(logs.length)})
-                </button>
-                {statusTabCounts.map(({ status, count }) => (
-                  <button
-                    type="button"
-                    key={status}
-                    className={statusTab === status ? "active" : ""}
-                    onClick={() => setStatusTab(status)}
-                  >
-                    {logStatusLabel(status)} ({formatNumber(count)})
-                  </button>
-                ))}
-              </div>
-
               <DataTable
-                title="Data fetch log"
-                description="Audit setiap fetch, dry-run, duplicate check, dan error dari backend."
                 data={filteredLogs}
                 columns={logColumns}
                 getRowKey={(log) => log.id}
@@ -399,6 +381,12 @@ export default function FetchJobsClient() {
                 searchableText={(log) => [log.location, log.source, log.status].filter(Boolean).join(" ")}
                 filters={
                   <>
+                    <select value={statusTab} onChange={(event) => setStatusTab(event.target.value)}>
+                      <option value="all">Semua status</option>
+                      {statusTabCounts.map(({ status, count }) => (
+                        <option value={status} key={status}>{logStatusLabel(status)} ({formatNumber(count)})</option>
+                      ))}
+                    </select>
                     <select value={logLocationFilter} onChange={(event) => setLogLocationFilter(Number(event.target.value) || "")}>
                       <option value="">Semua lokasi</option>
                       {locations.map((location) => <option value={location.id} key={location.id}>{location.branch_name}</option>)}
@@ -407,6 +395,37 @@ export default function FetchJobsClient() {
                       <option value="all">Semua sumber</option>
                       {logSources.map((source) => <option value={source} key={source}>{source}</option>)}
                     </select>
+                  </>
+                }
+                extendedFilterTitle="Extended Filters"
+                onResetFilters={() => {
+                  setStatusTab("all");
+                  setLogLocationFilter("");
+                  setLogSourceFilter("all");
+                }}
+                extendedFilters={
+                  <>
+                    <label>
+                      <span>Status fetch</span>
+                      <select value={statusTab} onChange={(event) => setStatusTab(event.target.value)}>
+                        <option value="all">Semua status</option>
+                        {logStatuses.map((status) => <option value={status} key={status}>{logStatusLabel(status)}</option>)}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Pilih lokasi</span>
+                      <select value={logLocationFilter} onChange={(event) => setLogLocationFilter(Number(event.target.value) || "")}>
+                        <option value="">Semua lokasi</option>
+                        {locations.map((location) => <option value={location.id} key={location.id}>{location.branch_name}</option>)}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Sumber review</span>
+                      <select value={logSourceFilter} onChange={(event) => setLogSourceFilter(event.target.value)}>
+                        <option value="all">Semua sumber</option>
+                        {logSources.map((source) => <option value={source} key={source}>{source}</option>)}
+                      </select>
+                    </label>
                   </>
                 }
               />
