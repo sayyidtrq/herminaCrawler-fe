@@ -323,9 +323,10 @@ export default function ReviewsClient() {
                   <button
                     type="button"
                     onClick={() => setIsFilterOpen(true)}
-                    className="h-9 px-3 flex items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 transition-colors shadow-sm whitespace-nowrap"
+                    className="h-9 w-9 flex items-center justify-center bg-white hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors shadow-sm shrink-0"
+                    title="Extended Filters"
                   >
-                    <Filter className="w-3.5 h-3.5 text-emerald-600" /> Extended Filters
+                    <Filter className="w-3.5 h-3.5 text-emerald-600" />
                   </button>
 
                   <select className="h-9 px-3 bg-white border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer shadow-sm min-w-[140px]" value={locationId} onChange={(e) => { setPage(1); setLocationId(Number(e.target.value) || ""); }}>

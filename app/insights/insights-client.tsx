@@ -471,9 +471,10 @@ export default function InsightsClient() {
                   <button 
                     type="button" 
                     onClick={() => setIsFilterOpen(true)}
-                    className="text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 flex items-center gap-1.5 transition-colors"
+                    className="bg-white hover:bg-slate-50 border border-slate-200 rounded-lg h-10 w-10 flex items-center justify-center transition-colors shrink-0 shadow-sm"
+                    title="Extended Filters"
                   >
-                    <Filter className="w-4 h-4 text-emerald-600" /> Extended Filters
+                    <Filter className="w-4 h-4 text-emerald-600" />
                   </button>
                   
                   <select className="text-sm font-bold text-slate-700 border-slate-200 rounded-lg h-10 px-3 bg-white focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer shadow-sm" value={filterLocationId} onChange={(e) => setFilterLocationId(Number(e.target.value) || "")}>

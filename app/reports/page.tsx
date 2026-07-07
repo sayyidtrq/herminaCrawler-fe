@@ -1,10 +1,5 @@
-import { PlaceholderPage } from "../components/placeholder-page";
+import ReportsClient from "./reports-client";
 
 export default function ReportsPage() {
-  return (
-    <PlaceholderPage
-      moduleName="Reports"
-      description="Halaman reports akan mengelola export CSV/JSON dan paket laporan stakeholder."
-    />
-  );
+  return <ReportsClient />;
 }
