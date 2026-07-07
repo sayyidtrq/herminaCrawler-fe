@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { RefreshCcw, Search, Filter, XCircle, X, Star, Pen } from "lucide-react";
 import { AppShell } from "../components/app-shell";
 import { DataTable, type DataTableColumn } from "../components/data-table";
-import { BackendWarning, Badge, PageHeader } from "../components/ui";
+import { BackendWarning, Badge, SectionHeader } from "../components/ui";
 import { fetchJson } from "../lib/api";
 import { formatDate, formatNumber } from "../lib/format";
 import { issueLabel, sentimentLabel, toneForSentiment, toneForUrgency, urgencyLabel } from "../lib/review-labels";
@@ -26,7 +26,7 @@ export default function ReviewsClient() {
   const [reviewsPayload, setReviewsPayload] = useState<ReviewsPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // States for filtering
   const [keyword, setKeyword] = useState(searchParams.get("keyword") ?? "");
   const [locationId, setLocationId] = useState<number | "">(initialLocationId);
@@ -35,13 +35,13 @@ export default function ReviewsClient() {
   const [datePreset, setDatePreset] = useState(searchParams.get("date_preset") ?? "all");
   const [sortOrder, setSortOrder] = useState("terbaru");
   const [page, setPage] = useState(1);
-  
+
   const [urgency, setUrgency] = useState(searchParams.get("urgency") ?? "all");
   const [issueCategory, setIssueCategory] = useState(searchParams.get("issue_category") ?? "all");
   const [isPatientSafety, setIsPatientSafety] = useState(searchParams.get("is_patient_safety") ?? "all");
-  
+
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  
+
   // State for Modal
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -115,7 +115,7 @@ export default function ReviewsClient() {
     }
     return items;
   }, [reviewsPayload?.items, sortOrder]);
-  
+
   const totalPages = reviewsPayload?.total_pages ?? 1;
   const sentimentCounts = useMemo(() => {
     return reviews.reduce<Record<string, number>>((acc, review) => {
@@ -140,7 +140,7 @@ export default function ReviewsClient() {
 
   const handleSaveReview = () => {
     if (!selectedReview) return;
-    
+
     // Mock save by updating the reviewsPayload locally
     if (reviewsPayload) {
       const updatedItems = reviewsPayload.items.map(r => {
@@ -154,7 +154,7 @@ export default function ReviewsClient() {
         return r;
       });
       setReviewsPayload({ ...reviewsPayload, items: updatedItems });
-      
+
       // Update selectedReview so modal reflects immediately
       setSelectedReview({
         ...selectedReview,
@@ -162,7 +162,7 @@ export default function ReviewsClient() {
         urgency: editUrgency
       });
     }
-    
+
     setIsEditing(false);
   };
 
@@ -223,10 +223,10 @@ export default function ReviewsClient() {
       align: "center",
       render: (review) => (
         <div className="flex items-center justify-center">
-          <button 
-            type="button" 
+          <button
+            type="button"
             title="Lihat Detail & Edit"
-            className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-200" 
+            className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-200"
             onClick={() => {
               setSelectedReview(review);
               setIsEditing(true);
@@ -244,84 +244,129 @@ export default function ReviewsClient() {
 
   return (
     <AppShell>
-      <PageHeader
-        eyebrow="Reviews"
-        title="Review Intelligence Feed"
-        helper="Cari, filter, dan audit review mentah beserta hasil analisis AI dari sistem secara realtime."
-        action={
+      <header className="page-header dashboard-hero-header">
+        <div>
+          <p className="kicker">Reviews</p>
+          <h1>Review Intelligence Feed</h1>
+        </div>
+        <div className="dashboard-header-actions">
           <button type="button" className="ghost-action" onClick={() => void loadData()} disabled={isLoading}>
             <RefreshCcw aria-hidden="true" size={15} /> Refresh Data
           </button>
-        }
-      />
+        </div>
+      </header>
 
       {error ? <BackendWarning error={error} /> : null}
 
-      <section className="grid grid-cols-1 xl:grid-cols-12 gap-6 mt-6">
+      <section className="locations-page-stack">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="bg-[#172e25] text-white rounded-2xl p-4 flex flex-col justify-between shadow-sm border border-[#2c5340]">
+          <span className="block text-[10px] font-bold uppercase tracking-wider text-emerald-400/80 mb-2">Total Review</span>
+          <div>
+            <strong className="text-2xl font-bold block">{formatNumber(reviewsPayload?.total ?? 0)}</strong>
+            <span className="text-[10px] text-emerald-400/60">Semua review masuk</span>
+          </div>
+        </div>
+        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+          <span className="block text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-2">Positif</span>
+          <div>
+            <strong className="text-2xl font-bold block text-emerald-800">{formatNumber(sentimentCounts.positive ?? 0)}</strong>
+            <span className="text-[10px] text-emerald-600/70">Dari halaman ini</span>
+          </div>
+        </div>
+        <div className="bg-sky-50 border border-sky-100 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+          <span className="block text-[10px] font-bold uppercase tracking-wider text-sky-600 mb-2">Netral</span>
+          <div>
+            <strong className="text-2xl font-bold block text-sky-800">{formatNumber(sentimentCounts.neutral ?? 0)}</strong>
+            <span className="text-[10px] text-sky-600/70">Dari halaman ini</span>
+          </div>
+        </div>
+        <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+          <span className="block text-[10px] font-bold uppercase tracking-wider text-red-600 mb-2">Negatif</span>
+          <div>
+            <strong className="text-2xl font-bold block text-red-800">{formatNumber(sentimentCounts.negative ?? 0)}</strong>
+            <span className="text-[10px] text-red-600/70">Dari halaman ini</span>
+          </div>
+        </div>
+        <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+          <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-2">Total Lokasi</span>
+          <div>
+            <strong className="text-2xl font-bold block text-slate-800">{locations.length}</strong>
+            <span className="text-[10px] text-slate-500">Cabang aktif</span>
+          </div>
+        </div>
+      </div>
+
+      <section className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* Main Content Column */}
         <article className="xl:col-span-8 2xl:col-span-9 flex flex-col gap-4">
-          
-          {/* Filter Bar Simple */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col xl:flex-row xl:items-center gap-4 justify-between">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-              <input
-                type="text"
-                className="w-full h-10 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
-                placeholder="Cari nama, keyword review..."
-                value={keyword}
-                onChange={(e) => { setPage(1); setKeyword(e.target.value); }}
-              />
-            </div>
-            
-            <div className="flex items-center gap-2 flex-wrap">
-              <button 
-                type="button" 
-                onClick={() => setIsFilterOpen(true)}
-                className="text-sm font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl h-10 px-3 flex items-center gap-1.5 transition-colors mr-2"
-              >
-                <Filter className="w-4 h-4 text-emerald-600" /> Extended Filters
-              </button>
-              
-              <select className="text-sm font-bold text-slate-700 border-slate-200 rounded-xl h-10 px-3 bg-white focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer shadow-sm" value={locationId} onChange={(e) => { setPage(1); setLocationId(Number(e.target.value) || ""); }}>
-                <option value="">Semua Lokasi</option>
-                {locations.map((loc) => <option value={loc.id} key={loc.id}>{loc.branch_name}</option>)}
-              </select>
-              
-              <select className="text-sm font-bold text-slate-700 border-slate-200 rounded-xl h-10 px-3 bg-white focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer shadow-sm" value={sentiment} onChange={(e) => { setPage(1); setSentiment(e.target.value); }}>
-                <option value="all">Semua Sentimen</option>
-                <option value="positive">Positif</option>
-                <option value="neutral">Netral</option>
-                <option value="negative">Negatif</option>
-              </select>
-              
-              <select className="text-sm font-bold text-slate-700 border-slate-200 rounded-xl h-10 px-3 bg-white focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer shadow-sm" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
-                <option value="terbaru">Terbaru</option>
-                <option value="terlama">Terlama</option>
-                <option value="positif_dulu">Positif First</option>
-                <option value="negatif_dulu">Negatif First</option>
-              </select>
-              
-              <button 
-                type="button" 
-                onClick={resetFilters}
-                className="text-sm font-bold text-slate-500 hover:text-red-600 bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-200 rounded-xl h-10 flex items-center gap-1.5 transition-colors px-3 ml-1"
-              >
-                <XCircle className="w-4 h-4" /> Reset
-              </button>
-            </div>
-          </div>
 
-          {/* Data Table */}
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-             <DataTable
+          <article className="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col overflow-hidden">
+            <div className="p-6 pb-4">
+              <SectionHeader kicker="Review Database" title="Semua Data Review" helper="Daftar review lengkap beserta metrik sentimen dan analisis." />
+              
+              <div className="mt-6 flex flex-col lg:flex-row lg:items-center gap-3 bg-slate-50 border border-slate-200 p-2 rounded-xl overflow-x-auto">
+                <div className="flex-1 min-w-[200px]">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      className="w-full h-9 pl-9 pr-4 py-1.5 bg-white border border-slate-200 rounded-lg text-[13px] font-medium text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors shadow-sm"
+                      placeholder="Cari nama, keyword review..."
+                      value={keyword}
+                      onChange={(e) => { setPage(1); setKeyword(e.target.value); }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(true)}
+                    className="h-9 px-3 flex items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 transition-colors shadow-sm whitespace-nowrap"
+                  >
+                    <Filter className="w-3.5 h-3.5 text-emerald-600" /> Extended Filters
+                  </button>
+
+                  <select className="h-9 px-3 bg-white border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer shadow-sm min-w-[140px]" value={locationId} onChange={(e) => { setPage(1); setLocationId(Number(e.target.value) || ""); }}>
+                    <option value="">Semua Lokasi</option>
+                    {locations.map((loc) => <option value={loc.id} key={loc.id}>{loc.branch_name}</option>)}
+                  </select>
+
+                  <select className="h-9 px-3 bg-white border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer shadow-sm min-w-[140px]" value={sentiment} onChange={(e) => { setPage(1); setSentiment(e.target.value); }}>
+                    <option value="all">Semua Sentimen</option>
+                    <option value="positive">Positif</option>
+                    <option value="neutral">Netral</option>
+                    <option value="negative">Negatif</option>
+                  </select>
+
+                  <select className="h-9 px-3 bg-white border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer shadow-sm min-w-[130px]" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
+                    <option value="terbaru">Terbaru</option>
+                    <option value="terlama">Terlama</option>
+                    <option value="positif_dulu">Positif First</option>
+                    <option value="negatif_dulu">Negatif First</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="h-9 px-3 flex items-center gap-1.5 bg-white hover:bg-red-50 hover:text-red-600 border border-slate-200 hover:border-red-200 rounded-lg text-[13px] font-bold text-slate-500 transition-colors shadow-sm whitespace-nowrap"
+                  >
+                    <XCircle className="w-3.5 h-3.5" /> Reset
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 flex-1">
+            <DataTable
               data={reviews}
               columns={reviewColumns}
               getRowKey={(review) => review.id}
               isLoading={isLoading}
+              hideToolbar={true}
               emptyTitle="Tidak ada review"
               emptyDetail="Coba ubah filter atau jalankan fetch baru."
-              hideToolbar={true}
               page={page}
               pageSize={reviewsPayload?.page_size ?? 20}
               totalItems={reviewsPayload?.total ?? 0}
@@ -330,13 +375,14 @@ export default function ReviewsClient() {
             />
           </div>
         </article>
+        </article>
 
         {/* Sidebar Dashboard Column */}
         <aside className="xl:col-span-4 2xl:col-span-3 space-y-6">
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
             <h3 className="font-extrabold text-slate-800 text-lg mb-1">Customer Activity</h3>
             <p className="text-xs font-medium text-slate-500 mb-8">Distribusi tren analisis pada halaman ini.</p>
-            
+
             {/* Donut/Circle visualizer placeholder */}
             <div className="flex justify-center mb-8">
               <div className="w-36 h-36 rounded-full border-[14px] border-slate-50 relative flex items-center justify-center shadow-inner">
@@ -358,15 +404,15 @@ export default function ReviewsClient() {
                     <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500"></div> Positif
                   </span>
                   <div className="flex items-center gap-2">
-                     <span className="font-black text-slate-900">{formatNumber(sentimentCounts.positive ?? 0)}</span>
-                     <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">{Math.round(((sentimentCounts.positive || 0) / (reviews.length || 1)) * 100)}%</span>
+                    <span className="font-black text-slate-900">{formatNumber(sentimentCounts.positive ?? 0)}</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">{Math.round(((sentimentCounts.positive || 0) / (reviews.length || 1)) * 100)}%</span>
                   </div>
                 </div>
                 <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                   <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(sentimentCounts.positive || 0) / (reviews.length || 1) * 100}%` }}></div>
+                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(sentimentCounts.positive || 0) / (reviews.length || 1) * 100}%` }}></div>
                 </div>
               </div>
-              
+
               {/* Negative Bar */}
               <div>
                 <div className="flex justify-between text-sm mb-1.5 items-center">
@@ -374,12 +420,12 @@ export default function ReviewsClient() {
                     <div className="w-2.5 h-2.5 rounded-sm bg-red-500"></div> Negatif
                   </span>
                   <div className="flex items-center gap-2">
-                     <span className="font-black text-slate-900">{formatNumber(sentimentCounts.negative ?? 0)}</span>
-                     <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">{Math.round(((sentimentCounts.negative || 0) / (reviews.length || 1)) * 100)}%</span>
+                    <span className="font-black text-slate-900">{formatNumber(sentimentCounts.negative ?? 0)}</span>
+                    <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">{Math.round(((sentimentCounts.negative || 0) / (reviews.length || 1)) * 100)}%</span>
                   </div>
                 </div>
                 <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                   <div className="h-full bg-red-500 rounded-full" style={{ width: `${(sentimentCounts.negative || 0) / (reviews.length || 1) * 100}%` }}></div>
+                  <div className="h-full bg-red-500 rounded-full" style={{ width: `${(sentimentCounts.negative || 0) / (reviews.length || 1) * 100}%` }}></div>
                 </div>
               </div>
 
@@ -390,17 +436,17 @@ export default function ReviewsClient() {
                     <div className="w-2.5 h-2.5 rounded-sm bg-slate-400"></div> Netral/Mix
                   </span>
                   <div className="flex items-center gap-2">
-                     <span className="font-black text-slate-900">{formatNumber((sentimentCounts.neutral ?? 0) + (sentimentCounts.mixed ?? 0))}</span>
-                     <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-bold">{Math.round((((sentimentCounts.neutral || 0) + (sentimentCounts.mixed || 0)) / (reviews.length || 1)) * 100)}%</span>
+                    <span className="font-black text-slate-900">{formatNumber((sentimentCounts.neutral ?? 0) + (sentimentCounts.mixed ?? 0))}</span>
+                    <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-bold">{Math.round((((sentimentCounts.neutral || 0) + (sentimentCounts.mixed || 0)) / (reviews.length || 1)) * 100)}%</span>
                   </div>
                 </div>
                 <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                   <div className="h-full bg-slate-400 rounded-full" style={{ width: `${((sentimentCounts.neutral || 0) + (sentimentCounts.mixed || 0)) / (reviews.length || 1) * 100}%` }}></div>
+                  <div className="h-full bg-slate-400 rounded-full" style={{ width: `${((sentimentCounts.neutral || 0) + (sentimentCounts.mixed || 0)) / (reviews.length || 1) * 100}%` }}></div>
                 </div>
               </div>
             </div>
           </div>
-          
+
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 shadow-md text-white border border-slate-700 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 rounded-full mix-blend-screen filter blur-2xl -translate-y-10 translate-x-10"></div>
             <h3 className="font-extrabold mb-2 text-lg relative z-10">AI Review Audit</h3>
@@ -412,6 +458,7 @@ export default function ReviewsClient() {
             </button>
           </div>
         </aside>
+        </section>
       </section>
 
       {/* Review Detail Modal */}
@@ -439,7 +486,7 @@ export default function ReviewsClient() {
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6 overflow-y-auto">
               <div className="flex gap-2 mb-5 flex-wrap">
                 <div className="px-3 py-1 rounded-full bg-amber-100 text-xs font-extrabold text-amber-800 flex items-center gap-1.5 border border-amber-200 h-8">
@@ -469,10 +516,10 @@ export default function ReviewsClient() {
                 {selectedReview.issue_category && <Badge tone="neutral">{issueLabel(selectedReview.issue_category)}</Badge>}
                 {selectedReview.is_patient_safety_issue && <Badge tone="critical">Patient Safety Issue</Badge>}
               </div>
-              
+
               <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-6 relative">
                 <div className="absolute top-4 left-4 text-slate-300">
-                   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M14.017 21v-7.391c0-5.714 4.02-6.695 8.18-7.234l1.803.738c-3.136 1.401-4.821 3.518-4.821 6.388h4.821v7.5h-10.003zm-14.017 0v-7.391c0-5.714 4.02-6.695 8.18-7.234l1.804.738c-3.137 1.401-4.822 3.518-4.822 6.388h4.822v7.5h-10.004z"/></svg>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M14.017 21v-7.391c0-5.714 4.02-6.695 8.18-7.234l1.803.738c-3.136 1.401-4.821 3.518-4.821 6.388h4.821v7.5h-10.003zm-14.017 0v-7.391c0-5.714 4.02-6.695 8.18-7.234l1.804.738c-3.137 1.401-4.822 3.518-4.822 6.388h4.822v7.5h-10.004z" /></svg>
                 </div>
                 <p className="text-slate-700 leading-relaxed font-medium pl-10 text-sm whitespace-pre-wrap">
                   {selectedReview.review_text || "Review ini tidak memiliki teks penjelasan."}
@@ -488,27 +535,27 @@ export default function ReviewsClient() {
                 </div>
               )}
             </div>
-            
+
             <div className="p-5 border-t border-slate-100 bg-slate-50/80 flex justify-end gap-3">
-               {isEditing ? (
-                 <>
-                   <button onClick={() => setIsEditing(false)} className="px-5 py-2.5 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-colors shadow-sm">
-                     Batal
-                   </button>
-                   <button onClick={handleSaveReview} className="px-5 py-2.5 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-md">
-                     Simpan
-                   </button>
-                 </>
-               ) : (
-                 <>
-                   <button onClick={() => setSelectedReview(null)} className="px-5 py-2.5 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-colors shadow-sm">
-                     Tutup
-                   </button>
-                   <button className="px-5 py-2.5 rounded-xl font-bold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-md">
-                     Buat Action Item
-                   </button>
-                 </>
-               )}
+              {isEditing ? (
+                <>
+                  <button onClick={() => setIsEditing(false)} className="px-5 py-2.5 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-colors shadow-sm">
+                    Batal
+                  </button>
+                  <button onClick={handleSaveReview} className="px-5 py-2.5 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-md">
+                    Simpan
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => setSelectedReview(null)} className="px-5 py-2.5 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-colors shadow-sm">
+                    Tutup
+                  </button>
+                  <button className="px-5 py-2.5 rounded-xl font-bold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-md">
+                    Buat Action Item
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -517,11 +564,11 @@ export default function ReviewsClient() {
       {isFilterOpen && (
         <div className="fixed inset-0 z-50 flex justify-end animate-in fade-in duration-200">
           {/* Overlay background */}
-          <div 
-            className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px]" 
+          <div
+            className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px]"
             onClick={() => setIsFilterOpen(false)}
           />
-          
+
           {/* Drawer Panel */}
           <div className="relative w-full max-w-sm bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
@@ -532,9 +579,9 @@ export default function ReviewsClient() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
-              
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pencarian Spesifik</label>
                 <input
@@ -563,7 +610,7 @@ export default function ReviewsClient() {
                   <option value="unknown">Unknown</option>
                 </select>
               </div>
-              
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tingkat Urgensi</label>
                 <select className="w-full text-sm font-bold text-slate-700 border-slate-200 rounded-xl h-10 px-3 bg-slate-50 focus:bg-white focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer" value={urgency} onChange={(e) => setUrgency(e.target.value)}>
@@ -586,7 +633,7 @@ export default function ReviewsClient() {
                   <option value="1">1 Bintang</option>
                 </select>
               </div>
-              
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Rentang Tanggal (Start Date - End Date)</label>
                 <div className="flex gap-2">
@@ -594,7 +641,7 @@ export default function ReviewsClient() {
                   <input type="date" className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:outline-none focus:border-emerald-500 transition-colors" />
                 </div>
               </div>
-              
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Urutkan Berdasarkan</label>
                 <select className="w-full text-sm font-bold text-slate-700 border-slate-200 rounded-xl h-10 px-3 bg-slate-50 focus:bg-white focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
@@ -617,8 +664,8 @@ export default function ReviewsClient() {
               </div>
 
               <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   className="w-5 h-5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
                   checked={isPatientSafety === "true"}
                   onChange={(e) => setIsPatientSafety(e.target.checked ? "true" : "all")}
@@ -627,17 +674,17 @@ export default function ReviewsClient() {
               </label>
 
             </div>
-            
+
             <div className="p-5 border-t border-slate-100 bg-slate-50 flex gap-3">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={resetFilters}
                 className="flex-1 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-700 font-bold text-sm hover:bg-slate-100 hover:text-red-600 transition-colors"
               >
                 Reset
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => {
                   setPage(1);
                   setIsFilterOpen(false);
