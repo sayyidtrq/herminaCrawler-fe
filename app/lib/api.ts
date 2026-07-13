@@ -1,16 +1,9 @@
-function resolveApiBaseUrl(): string {
-  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  if (envUrl) {
-    return envUrl.replace(/\/$/, "");
-  } else if (process.env.NODE_ENV === "production") {
-    return "http://192.168.1.3:8000";
-  } else {
-    return "http://localhost:8000";
-  }
-}
-
-export const API_BASE_URL = resolveApiBaseUrl();
+// Same-origin in every environment: the browser calls /api/* on whatever host
+// serves this app, and next.config.ts rewrites that to BACKEND_ORIGIN. This is
+// what lets a plain-HTTP backend work behind an HTTPS deployment — a direct
+// http:// call from an https:// page is blocked by the browser as mixed content.
+// Point BACKEND_ORIGIN at the backend instead of hardcoding a URL here.
+export const API_BASE_URL = "";
 
 // Notified by AuthProvider so a 401 anywhere can clear React auth state
 // before the hard redirect below fires.

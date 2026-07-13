@@ -132,7 +132,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="status-dot online" />
           <div>
             <strong>Backend target</strong>
-            <p>{API_BASE_URL}</p>
+            <p>{API_BASE_URL || "same-origin /api"}</p>
           </div>
         </div>
       </aside>
