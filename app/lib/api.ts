@@ -4,7 +4,7 @@ function resolveApiBaseUrl(): string {
   if (envUrl) {
     return envUrl.replace(/\/$/, "");
   } else if (process.env.NODE_ENV === "production") {
-    return "http://192.168.1.3:8000";
+    return "http://192.168.1.3:8000/api/docs";
   } else {
     return "http://localhost:8000";
   }
