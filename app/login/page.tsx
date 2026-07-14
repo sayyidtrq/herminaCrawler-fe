@@ -160,7 +160,7 @@ export default function LoginPage() {
             H
           </div>
           <h1 className="text-3xl xl:text-4xl font-extrabold text-white tracking-tight mb-4">
-            Hermina Review Intelligence
+            Review System
           </h1>
           <p className="text-base xl:text-lg text-emerald-100/80 mb-12 leading-relaxed font-medium">
             Sistem manajemen komprehensif berbasis AI untuk mengelola pengalaman pasien dan umpan balik rumah sakit.
@@ -255,7 +255,7 @@ export default function LoginPage() {
               H
             </div>
             <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">
-              Hermina Review Intelligence
+              Review System
             </h2>
           </div>
 
